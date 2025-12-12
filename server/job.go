@@ -38,7 +38,9 @@ const (
 		"deliv_mode" TEXT,
 		"cov_type" TEXT NOT NULL,
 		"cov_module" TEXT NOT NULL,
+		"ignore_hitcount" INTEGER,
 		"fuzz_iter" INTEGER NOT NULL,
+		"instrument_transitive" TEXT,
 		"target_module" TEXT NOT NULL,
 		"target_method" TEXT,
 		"target_offset" TEXT,
@@ -65,6 +67,7 @@ const (
 		"autoresume" INTEGER,
 		"shuffle_queue" INTEGER,
 		"no_affinity" INTEGER,
+		"env_vars" TEXT,
 		"status" INTEGER,
 		FOREIGN KEY (aid) REFERENCES agents(id)
 	  );`
@@ -86,7 +89,9 @@ type Job struct {
 	DelivMode      string `json:"deliv_mode" form:"deliv_mode" stbl:"deliv_mode"`
 	CoverageType   string `json:"cov_type" form:"cov_type" stbl:"cov_type"`
 	CoverageModule string `json:"cov_module" form:"cov_module" stbl:"cov_module"`
+	IgnoreHitcount int    `json:"ignore_hitcount" form:"ignore_hitcount" stbl:"ignore_hitcount"`
 	FuzzIter       int    `json:"fuzz_iter" form:"fuzz_iter" stbl:"fuzz_iter"`
+	InstrumentTransitive string `json:"instrument_transitive" form:"instrument_transitive" stbl:"instrument_transitive"`
 	TargetModule   string `json:"target_module" form:"target_module" stbl:"target_module"`
 	TargetMethod   string `json:"target_method" form:"target_method" stbl:"target_method"`
 	TargetOffset   string `json:"target_offset" form:"target_offset" stbl:"target_offset"`
@@ -113,6 +118,7 @@ type Job struct {
 	SkipCrashes    int    `json:"skip_crashes" form:"skip_crashes" stbl:"skip_crashes"`
 	ShuffleQueue   int    `json:"shuffle_queue" form:"shuffle_queue" stbl:"shuffle_queue"`
 	Autoresume     int    `json:"autoresume" form:"autoresume" stbl:"autoresume"`
+	EnvVars        string `json:"env_vars" form:"env_vars" stbl:"env_vars"`
 	Status         status `json:"status" form:"status" stbl:"status"`
 }
 
@@ -121,6 +127,7 @@ func newJob() *Job {
 	j.GUID = xid.New()
 	j.Cores = 1
 	j.InstMode = "DynamoRIO"
+	j.IgnoreHitcount = 0
 	j.CrashMode = 0
 	j.DirtyMode = 0
 	j.DumbMode = 0
@@ -133,6 +140,8 @@ func newJob() *Job {
 	j.SkipCrashes = 0
 	j.ShuffleQueue = 0
 	j.Autoresume = 0
+	j.EnvVars = ""
+	j.InstrumentTransitive = ""
 	j.Recorder = structable.New(db, DB_FLAVOR).Bind(TB_NAME_JOBS, j)
 	return j
 }
@@ -790,6 +799,7 @@ func editJob(c *gin.Context) {
 		j.SkipCrashes = 0
 		j.ShuffleQueue = 0
 		j.Autoresume = 0
+		j.IgnoreHitcount = 0
 		if err := c.ShouldBind(&j); err != nil {
 			otherError(c, map[string]string{
 				"title": title,

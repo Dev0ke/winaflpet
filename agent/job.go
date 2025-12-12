@@ -46,7 +46,9 @@ type Job struct {
 	DelivMode      string `json:"deliv_mode"`
 	CoverageType   string `json:"cov_type"`
 	CoverageModule string `json:"cov_module"`
+	IgnoreHitcount int    `json:"ignore_hitcount"`
 	FuzzIter       int    `json:"fuzz_iter"`
+	InstrumentTransitive string `json:"instrument_transitive"`
 	TargetModule   string `json:"target_module"`
 	TargetMethod   string `json:"target_method"`
 	TargetOffset   string `json:"target_offset"`
@@ -73,6 +75,7 @@ type Job struct {
 	SkipCrashes    int    `json:"skip_crashes"`
 	ShuffleQueue   int    `json:"shuffle_queue"`
 	Autoresume     int    `json:"autoresume"`
+	EnvVars        string `json:"env_vars"`
 	Status         int    `json:"status"`
 }
 
@@ -143,6 +146,15 @@ func (j Job) Start(fID int) error {
 
 	if j.NoAffinity != 0 {
 		envs = append(envs, "AFL_NO_AFFINITY=1")
+	}
+
+	if strings.TrimSpace(j.EnvVars) != "" {
+		customEnvs, err := parseEnvVars(j.EnvVars)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+		envs = applyEnvOverrides(envs, customEnvs)
 	}
 
 	args := []string{}
@@ -228,7 +240,14 @@ func (j Job) Start(fID int) error {
 		}
 	}
 
+	if j.IgnoreHitcount != 0 {
+		args = append(args, "-ignore_hitcount")
+	}
+
 	if j.InstMode == "TinyInst" {
+		for _, m := range splitList(j.InstrumentTransitive) {
+			args = append(args, fmt.Sprintf("-instrument_transitive %s", m))
+		}
 		args = append(args, "-persist")
 		args = append(args, "-loop")
 		args = append(args, fmt.Sprintf("-iterations %d", j.FuzzIter))

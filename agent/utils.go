@@ -26,12 +26,107 @@ const (
 	WINCRED_NAME = "WinAFL_Pet_Agent"
 )
 
+var envKeyRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func splitList(text string) []string {
+	// Split on newlines / commas / semicolons; keep spaces inside tokens (paths).
+	s := strings.ReplaceAll(text, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	s = strings.ReplaceAll(s, ";", ",")
+
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return r == '\n' || r == ','
+	})
+
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		v := strings.TrimSpace(p)
+		if v == "" {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+func parseEnvVars(text string) ([]string, error) {
+	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	out := make([]string, 0, len(lines))
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+
+		low := strings.ToLower(line)
+		if strings.HasPrefix(low, "#") || strings.HasPrefix(low, "//") || strings.HasPrefix(low, ";") {
+			continue
+		}
+
+		// Accept common prefixes from shell snippets.
+		if strings.HasPrefix(low, "set ") {
+			line = strings.TrimSpace(line[4:])
+		} else if strings.HasPrefix(low, "export ") {
+			line = strings.TrimSpace(line[7:])
+		}
+
+		i := strings.Index(line, "=")
+		if i <= 0 {
+			return nil, fmt.Errorf("invalid env var line (expected KEY=VALUE): %q", raw)
+		}
+
+		key := strings.TrimSpace(line[:i])
+		val := ""
+		if i+1 < len(line) {
+			val = line[i+1:]
+		}
+
+		if !envKeyRe.MatchString(key) {
+			return nil, fmt.Errorf("invalid env var name %q (line: %q)", key, raw)
+		}
+
+		out = append(out, fmt.Sprintf("%s=%s", key, val))
+	}
+
+	return out, nil
+}
+
+func applyEnvOverrides(base []string, overrides []string) []string {
+	if len(overrides) == 0 {
+		return base
+	}
+
+	overrideKeys := map[string]struct{}{}
+	for _, kv := range overrides {
+		if i := strings.Index(kv, "="); i > 0 {
+			// Windows treats env var names as case-insensitive.
+			overrideKeys[strings.ToUpper(kv[:i])] = struct{}{}
+		}
+	}
+
+	out := make([]string, 0, len(base)+len(overrides))
+	for _, kv := range base {
+		i := strings.Index(kv, "=")
+		if i <= 0 {
+			continue
+		}
+		if _, ok := overrideKeys[strings.ToUpper(kv[:i])]; ok {
+			continue
+		}
+		out = append(out, kv)
+	}
+
+	out = append(out, overrides...)
+	return out
 }
 
 func stripAnsi(s string) string {

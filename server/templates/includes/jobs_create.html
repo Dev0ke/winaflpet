@@ -302,6 +302,16 @@
 
     </div>
 
+    <div class="row ms-0 mt-2">
+      <div class="col-md">
+        <label for="envVars" class="col-md col-form-label">Custom env vars</label>
+        <div class="col-md">
+          <textarea class="form-control" name="env_vars" id="envVars" rows="4" aria-describedby="envVarsHelp" placeholder="AFL_FAST_CAL=1&#10;AFL_DISABLE_TRIM=1&#10;AFL_SKIP_BYTES=512"></textarea>
+          <small id="envVarsHelp" class="form-text text-muted">One KEY=VALUE per line. These will be added to the remote process environment.</small>
+        </div>
+      </div>
+    </div>
+
   </fieldset>
 
   <fieldset class="row mb-3">
@@ -329,6 +339,14 @@
       </div>
 
       <div class="col-md">
+        <label for="instrumentTransitive" class="col-md col-form-label">Instrument transitive module(s)</label>
+        <div class="col-md">
+          <textarea class="form-control" name="instrument_transitive" id="instrumentTransitive" rows="2" aria-describedby="instrumentTransitiveHelp" placeholder="mso.dll&#10;mso20win32client.dll"></textarea>
+          <small id="instrumentTransitiveHelp" class="form-text text-muted">TinyInst only. One module per line (or comma-separated). Adds <code>-instrument_transitive &lt;module&gt;</code> for each.</small>
+        </div>
+      </div>
+
+      <div class="col-md">
         <label for="coverageType" class="col-md col-form-label">Coverage type</label>
         <div class="col-md">
           <select class="form-select" name="cov_type" id="coverageType">
@@ -344,6 +362,17 @@
         <div class="col-md">
           <input type="number" class="form-control" name="fuzz_iter" id="fuzzIter" aria-describedby="fuzzIterHelp" placeholder="5000" required>
           <small id="fuzzIterHelp" class="form-number">Fuzzing iterations to perform</small>
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label class="col-md col-form-label">Options</label>
+        <div class="col-md">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="ignore_hitcount" id="ignoreHitcount" value="1">
+            <label class="form-check-label" for="ignoreHitcount">Ignore hitcount</label>
+          </div>
+          <small class="form-text text-muted">Adds <code>-ignore_hitcount</code> to the WinAFL command line.</small>
         </div>
       </div>
     </div>

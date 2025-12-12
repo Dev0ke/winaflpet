@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	_ "github.com/mattn/go-sqlite3"
@@ -56,6 +57,64 @@ func initDB(dataType string, dataSrc string) {
 	}
 }
 
+func tableColumns(con *sql.DB, table string) (map[string]bool, error) {
+	cols := map[string]bool{}
+	rows, err := con.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		return cols, err
+	}
+	defer rows.Close()
+
+	// cid, name, type, notnull, dflt_value, pk
+	for rows.Next() {
+		var (
+			cid       int
+			name      string
+			typ       string
+			notnull   int
+			dfltValue sql.NullString
+			pk        int
+		)
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dfltValue, &pk); err != nil {
+			return cols, err
+		}
+		cols[name] = true
+	}
+	return cols, rows.Err()
+}
+
+func ensureJobColumns(con *sql.DB) error {
+	cols, err := tableColumns(con, TB_NAME_JOBS)
+	if err != nil {
+		return err
+	}
+
+	type colSpec struct {
+		name string
+		ddl  string
+	}
+
+	need := []colSpec{
+		{name: "ignore_hitcount", ddl: "ALTER TABLE jobs ADD COLUMN ignore_hitcount INTEGER"},
+		{name: "env_vars", ddl: "ALTER TABLE jobs ADD COLUMN env_vars TEXT"},
+		{name: "instrument_transitive", ddl: "ALTER TABLE jobs ADD COLUMN instrument_transitive TEXT"},
+	}
+
+	for _, c := range need {
+		if cols[c.name] {
+			continue
+		}
+		if _, err := con.Exec(c.ddl); err != nil {
+			// Be forgiving if another process already added it.
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
 func getDB() squirrel.DBProxyBeginner {
 	dataType := DB_FLAVOR
 	dataDir := viper.GetString("data.dir")
@@ -68,6 +127,10 @@ func getDB() squirrel.DBProxyBeginner {
 	}
 
 	con, _ := sql.Open(dataType, dataSrc)
+	// Best-effort migrations for existing databases.
+	if err := ensureJobColumns(con); err != nil {
+		log.Println(err)
+	}
 	cache := squirrel.NewStmtCacheProxy(con)
 
 	return cache
