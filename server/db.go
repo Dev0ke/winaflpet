@@ -98,6 +98,10 @@ func ensureJobColumns(con *sql.DB) error {
 		{name: "ignore_hitcount", ddl: "ALTER TABLE jobs ADD COLUMN ignore_hitcount INTEGER"},
 		{name: "env_vars", ddl: "ALTER TABLE jobs ADD COLUMN env_vars TEXT"},
 		{name: "instrument_transitive", ddl: "ALTER TABLE jobs ADD COLUMN instrument_transitive TEXT"},
+		{name: "afl_f_mode", ddl: "ALTER TABLE jobs ADD COLUMN afl_f_mode INTEGER"},
+		{name: "afl_f_dir", ddl: "ALTER TABLE jobs ADD COLUMN afl_f_dir TEXT"},
+		{name: "afl_f_suffix", ddl: "ALTER TABLE jobs ADD COLUMN afl_f_suffix TEXT"},
+		{name: "target_args", ddl: "ALTER TABLE jobs ADD COLUMN target_args TEXT"},
 	}
 
 	for _, c := range need {

@@ -27,6 +27,7 @@ const (
 )
 
 var envKeyRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+var atArgRe = regexp.MustCompile(`@@\S*`)
 
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -233,6 +234,46 @@ func splitCmdLine(cmdLine string) (string, string) {
 	}
 
 	return cmd, args
+}
+
+func quoteWindowsArg(s string) string {
+	if s == "" {
+		return `""`
+	}
+
+	needsQuotes := strings.ContainsAny(s, " \t")
+	if strings.Contains(s, `"`) {
+		needsQuotes = true
+		s = strings.ReplaceAll(s, `"`, `\"`)
+	}
+
+	if needsQuotes {
+		return `"` + s + `"`
+	}
+	return s
+}
+
+// expandAtArgs replaces @@ placeholders in a free-form argument string.
+// Rules:
+//   - "@@"  -> basePath
+//   - "@@x" -> basePath + "x" (suffix concatenation)
+//
+// The replacement is only intended to be used when AFL "-f" mode is enabled.
+func expandAtArgs(args string, basePath string) string {
+	if strings.TrimSpace(args) == "" || basePath == "" {
+		return args
+	}
+
+	return atArgRe.ReplaceAllStringFunc(args, func(m string) string {
+		if len(m) < 2 {
+			return m
+		}
+		suffix := ""
+		if len(m) > 2 {
+			suffix = m[2:]
+		}
+		return quoteWindowsArg(basePath + suffix)
+	})
 }
 
 func joinPath(workingDir string, outputDir string, pathNames ...string) string {

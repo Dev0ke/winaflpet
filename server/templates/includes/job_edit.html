@@ -175,6 +175,33 @@
 
     </div>
 
+    <div class="row ms-0 mt-2">
+      <div class="col-3">
+        <div class="form-check form-switch">
+          <div class="col">
+            <input class="form-check-input" type="checkbox" name="afl_f_mode" id="aflFMode" value="1" {{if eq .job.AFLFMode 1}}checked{{end}}>
+            <label class="form-check-label" for="aflFMode">Enable AFL <code>-f</code> file mode</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label for="aflFDir" class="col-md col-form-label">AFL <code>-f</code> directory</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="afl_f_dir" id="aflFDir" aria-describedby="aflFDirHelp" value="{{.job.AFLFDir}}">
+          <small id="aflFDirHelp" class="form-text text-muted">Directory on the remote agent where the per-core input file will be created.</small>
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label for="aflFSuffix" class="col-md col-form-label">AFL <code>-f</code> suffix</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="afl_f_suffix" id="aflFSuffix" aria-describedby="aflFSuffixHelp" value="{{.job.AFLFSuffix}}">
+          <small id="aflFSuffixHelp" class="form-text text-muted">Suffix appended to a random 4-char filename (e.g. <code>.ppt</code>).</small>
+        </div>
+      </div>
+    </div>
+
     <div class="row ms-0">
 
       <div class="col-3">
@@ -434,6 +461,16 @@
         </div>
       </div>
 
+    </div>
+
+    <div class="row ms-0 mt-2">
+      <div class="col-md-12">
+        <label for="targetArgs" class="col-md col-form-label">Target arguments (template)</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="target_args" id="targetArgs" aria-describedby="targetArgsHelp" value="{{.job.TargetArgs}}">
+          <small id="targetArgsHelp" class="form-text text-muted">Optional. If set, this overrides the args from the command line above. When AFL <code>-f</code> mode is enabled, <code>@@</code> (and <code>@@x</code>) will be replaced with the generated absolute file path (and path + suffix).</small>
+        </div>
+      </div>
     </div>
   </fieldset>
 

@@ -44,6 +44,9 @@ type Job struct {
 	Timeout        int    `json:"timeout"`
 	InstMode       string `json:"inst_mode"`
 	DelivMode      string `json:"deliv_mode"`
+	AFLFMode       int    `json:"afl_f_mode"`
+	AFLFDir        string `json:"afl_f_dir"`
+	AFLFSuffix     string `json:"afl_f_suffix"`
 	CoverageType   string `json:"cov_type"`
 	CoverageModule string `json:"cov_module"`
 	IgnoreHitcount int    `json:"ignore_hitcount"`
@@ -54,6 +57,7 @@ type Job struct {
 	TargetOffset   string `json:"target_offset"`
 	TargetNArgs    int    `json:"target_nargs"`
 	TargetApp      string `json:"target_app"`
+	TargetArgs     string `json:"target_args"`
 	TargetArch     string `json:"target_arch"`
 	AFLDir         string `json:"afl_dir"`
 	DrioDir        string `json:"drio_dir"`
@@ -159,11 +163,41 @@ func (j Job) Start(fID int) error {
 
 	args := []string{}
 
+	// Allow specifying the "last args" in WebUI. If set, it overrides any args that
+	// were included in TargetApp.
+	if strings.TrimSpace(j.TargetArgs) != "" {
+		targetArgs = strings.TrimSpace(j.TargetArgs)
+	}
+
+	// AFL "-f" file mode:
+	// - Generate a per-fuzzer input file path (random 4 chars + suffix) to support multi-core.
+	// - Pass it to afl-fuzz via "-f <file>".
+	// - Replace @@ placeholders in TargetArgs with the generated absolute file path.
+	//
+	// When not enabled: do NOT replace @@, and do NOT inject "-f @@" into target args.
+	if j.AFLFMode != 0 {
+		if strings.TrimSpace(j.AFLFDir) == "" {
+			return errors.New("AFL -f mode enabled but afl_f_dir is empty")
+		}
+
+		dir := strings.TrimSpace(j.AFLFDir)
+		if !filepath.IsAbs(dir) {
+			dir = filepath.Join(j.AFLDir, dir)
+		}
+
+		r4 := xid.New().String()
+		if len(r4) > 4 {
+			r4 = r4[:4]
+		}
+
+		fuzzFilePath := filepath.Clean(filepath.Join(dir, r4+strings.TrimSpace(j.AFLFSuffix)))
+		args = append(args, fmt.Sprintf("-f %s", quoteWindowsArg(fuzzFilePath)))
+		targetArgs = expandAtArgs(targetArgs, fuzzFilePath)
+	}
+
+	// Delivery mode: shared memory option is controlled by afl-fuzz "-s".
 	if j.DelivMode == "sm" {
 		args = append(args, "-s")
-		targetArgs += "-s @@"
-	} else {
-		targetArgs += "-f @@"
 	}
 
 	opRole := "-S"

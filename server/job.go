@@ -36,6 +36,9 @@ const (
 		"timeout" INTEGER NOT NULL,
 		"inst_mode" TEXT NOT NULL,
 		"deliv_mode" TEXT,
+		"afl_f_mode" INTEGER,
+		"afl_f_dir" TEXT,
+		"afl_f_suffix" TEXT,
 		"cov_type" TEXT NOT NULL,
 		"cov_module" TEXT NOT NULL,
 		"ignore_hitcount" INTEGER,
@@ -46,6 +49,7 @@ const (
 		"target_offset" TEXT,
 		"target_nargs" INTEGER,
 		"target_app" TEXT NOT NULL,
+		"target_args" TEXT,
 		"target_arch" TEXT NOT NULL,
 		"afl_dir" TEXT NOT NULL,
 		"drio_dir" TEXT NOT NULL,
@@ -87,6 +91,9 @@ type Job struct {
 	Timeout        int    `json:"timeout" form:"timeout" stbl:"timeout"`
 	InstMode       string `json:"inst_mode" form:"inst_mode" stbl:"inst_mode"`
 	DelivMode      string `json:"deliv_mode" form:"deliv_mode" stbl:"deliv_mode"`
+	AFLFMode       int    `json:"afl_f_mode" form:"afl_f_mode" stbl:"afl_f_mode"`
+	AFLFDir        string `json:"afl_f_dir" form:"afl_f_dir" stbl:"afl_f_dir"`
+	AFLFSuffix     string `json:"afl_f_suffix" form:"afl_f_suffix" stbl:"afl_f_suffix"`
 	CoverageType   string `json:"cov_type" form:"cov_type" stbl:"cov_type"`
 	CoverageModule string `json:"cov_module" form:"cov_module" stbl:"cov_module"`
 	IgnoreHitcount int    `json:"ignore_hitcount" form:"ignore_hitcount" stbl:"ignore_hitcount"`
@@ -97,6 +104,7 @@ type Job struct {
 	TargetOffset   string `json:"target_offset" form:"target_offset" stbl:"target_offset"`
 	TargetNArgs    int    `json:"target_nargs" form:"target_nargs" stbl:"target_nargs"`
 	TargetApp      string `json:"target_app" form:"target_app" stbl:"target_app"`
+	TargetArgs     string `json:"target_args" form:"target_args" stbl:"target_args"`
 	TargetArch     string `json:"target_arch" form:"target_arch" stbl:"target_arch"`
 	AFLDir         string `json:"afl_dir" form:"afl_dir" stbl:"afl_dir"`
 	DrioDir        string `json:"drio_dir" form:"drio_dir" stbl:"drio_dir"`
@@ -127,6 +135,10 @@ func newJob() *Job {
 	j.GUID = xid.New()
 	j.Cores = 1
 	j.InstMode = "DynamoRIO"
+	j.AFLFMode = 0
+	j.AFLFDir = ""
+	j.AFLFSuffix = ""
+	j.TargetArgs = ""
 	j.IgnoreHitcount = 0
 	j.CrashMode = 0
 	j.DirtyMode = 0
@@ -800,6 +812,7 @@ func editJob(c *gin.Context) {
 		j.ShuffleQueue = 0
 		j.Autoresume = 0
 		j.IgnoreHitcount = 0
+		j.AFLFMode = 0
 		if err := c.ShouldBind(&j); err != nil {
 			otherError(c, map[string]string{
 				"title": title,
