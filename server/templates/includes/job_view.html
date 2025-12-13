@@ -1,5 +1,24 @@
 {{ define "content" }}
 <div id="content" class="stats">
+  {{if .stats}}
+    {{$job := (index .stats 0).GetJob}}
+    {{$remaining := 0}}
+    {{range seq $job.Cores}}
+      {{if not (hasStatus $job.Status .) }}
+        {{$remaining = add $remaining 1}}
+      {{end}}
+    {{end}}
+    {{if gt $remaining 0}}
+      <div class="mb-3">
+        <a href="/job/{{$job.GUID}}/start_all" class="btn btn-outline-secondary action playall" data-method="POST" title="Start all remaining instances ({{ $remaining }})">
+          <svg class="bi play-fill" width="20" height="20" fill="currentColor" color="green" viewBox="0 0 20 20">
+            <use xlink:href="/static/svg/bootstrap-icons.svg#play-fill"/>
+          </svg>
+          <span class="badge text-bg-success">{{ $remaining }}</span>
+        </a>
+      </div>
+    {{end}}
+  {{end}}
   <div id="accordion" class="accordion">
   {{ range .stats }}
     <div class="card fuzzer accordion-item">

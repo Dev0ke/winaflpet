@@ -195,6 +195,8 @@ func setupRouter() *gin.Engine {
 			switch c.Param("action") {
 			case "start":
 				startJob(c)
+			case "start_all":
+				startAllJob(c)
 			case "stop":
 				stopJob(c)
 			case "edit":

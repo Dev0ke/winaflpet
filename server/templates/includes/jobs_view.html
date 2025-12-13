@@ -30,6 +30,20 @@
         <div class="card-footer">
           <div class="btn-group">
           {{$ := .}}
+          {{$remaining := 0}}
+          {{range seq .Cores}}
+            {{if not (hasStatus $.Status .) }}
+              {{$remaining = add $remaining 1}}
+            {{end}}
+          {{end}}
+          {{if gt $remaining 0}}
+            <a href="/job/{{$.GUID}}/start_all" class="btn btn-outline-secondary action playall" data-method="POST" title="Start all remaining instances ({{ $remaining }})">
+              <svg class="bi play-fill" width="20" height="20" fill="currentColor" color="green" viewBox="0 0 20 20">
+                <use xlink:href="/static/svg/bootstrap-icons.svg#play-fill"/>
+              </svg>
+              <span class="badge text-bg-success">{{ $remaining }}</span>
+            </a>
+          {{end}}
           {{ $break := false }}
           {{range seq .Cores}}
             {{ if $break }}
