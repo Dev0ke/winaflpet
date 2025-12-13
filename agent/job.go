@@ -47,6 +47,11 @@ type Job struct {
 	AFLFMode       int    `json:"afl_f_mode"`
 	AFLFDir        string `json:"afl_f_dir"`
 	AFLFSuffix     string `json:"afl_f_suffix"`
+	DrioPersistenceInApp int `json:"drio_persistence_in_app"`
+	TinyPersist    int    `json:"ti_persist"`
+	TinyLoop       int    `json:"ti_loop"`
+	BasicExtraArgs string `json:"basic_extra_args"`
+	InstExtraArgs  string `json:"inst_extra_args"`
 	CoverageType   string `json:"cov_type"`
 	CoverageModule string `json:"cov_module"`
 	IgnoreHitcount int    `json:"ignore_hitcount"`
@@ -267,10 +272,18 @@ func (j Job) Start(fID int) error {
 		args = append(args, fmt.Sprintf("-x %s", j.ExtrasDir))
 	}
 
+	if strings.TrimSpace(j.BasicExtraArgs) != "" {
+		args = append(args, strings.TrimSpace(j.BasicExtraArgs))
+	}
+
 	args = append(args, "--")
 	args = append(args, fmt.Sprintf("-covtype %s", j.CoverageType))
 
-	for _, m := range strings.Split(j.CoverageModule, ",") {
+	if j.InstMode == "DynamoRIO" && j.DrioPersistenceInApp != 0 {
+		args = append(args, "-persistence_mode in_app")
+	}
+
+	for _, m := range splitList(j.CoverageModule) {
 		if j.InstMode == "TinyInst" {
 			args = append(args, fmt.Sprintf("-instrument_module %s", m))
 		} else {
@@ -286,8 +299,12 @@ func (j Job) Start(fID int) error {
 		for _, m := range splitList(j.InstrumentTransitive) {
 			args = append(args, fmt.Sprintf("-instrument_transitive %s", m))
 		}
-		args = append(args, "-persist")
-		args = append(args, "-loop")
+		if j.TinyPersist != 0 {
+			args = append(args, "-persist")
+		}
+		if j.TinyLoop != 0 {
+			args = append(args, "-loop")
+		}
 		args = append(args, fmt.Sprintf("-iterations %d", j.FuzzIter))
 	} else {
 		args = append(args, fmt.Sprintf("-fuzz_iterations %d", j.FuzzIter))
@@ -297,6 +314,11 @@ func (j Job) Start(fID int) error {
 	args = append(args, fmt.Sprintf("-target_method %s", j.TargetMethod))
 	args = append(args, fmt.Sprintf("-target_offset %s", j.TargetOffset))
 	args = append(args, fmt.Sprintf("-nargs %d", j.TargetNArgs))
+
+	if strings.TrimSpace(j.InstExtraArgs) != "" {
+		args = append(args, strings.TrimSpace(j.InstExtraArgs))
+	}
+
 	args = append(args, "--")
 	args = append(args, targetApp)
 	args = append(args, targetArgs)

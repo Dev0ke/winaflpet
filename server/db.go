@@ -102,6 +102,11 @@ func ensureJobColumns(con *sql.DB) error {
 		{name: "afl_f_dir", ddl: "ALTER TABLE jobs ADD COLUMN afl_f_dir TEXT"},
 		{name: "afl_f_suffix", ddl: "ALTER TABLE jobs ADD COLUMN afl_f_suffix TEXT"},
 		{name: "target_args", ddl: "ALTER TABLE jobs ADD COLUMN target_args TEXT"},
+		{name: "drio_persistence_in_app", ddl: "ALTER TABLE jobs ADD COLUMN drio_persistence_in_app INTEGER"},
+		{name: "ti_persist", ddl: "ALTER TABLE jobs ADD COLUMN ti_persist INTEGER"},
+		{name: "ti_loop", ddl: "ALTER TABLE jobs ADD COLUMN ti_loop INTEGER"},
+		{name: "basic_extra_args", ddl: "ALTER TABLE jobs ADD COLUMN basic_extra_args TEXT"},
+		{name: "inst_extra_args", ddl: "ALTER TABLE jobs ADD COLUMN inst_extra_args TEXT"},
 	}
 
 	for _, c := range need {

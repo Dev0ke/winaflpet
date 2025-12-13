@@ -202,6 +202,16 @@
       </div>
     </div>
 
+    <div class="row ms-0 mt-2">
+      <div class="col-md-12">
+        <label for="basicExtraArgs" class="col-md col-form-label">Basic parameters: extra args (before first <code>--</code>)</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="basic_extra_args" id="basicExtraArgs" aria-describedby="basicExtraArgsHelp" value="{{.job.BasicExtraArgs}}">
+          <small id="basicExtraArgsHelp" class="form-text text-muted">Optional. Appended to the afl-fuzz command line right before the first <code>--</code>.</small>
+        </div>
+      </div>
+    </div>
+
     <div class="row ms-0">
 
       <div class="col-3">
@@ -357,8 +367,8 @@
       <div class="col-md">
         <label for="coverageModule" class="col-md col-form-label">Coverage module(s)</label>
         <div class="col-md">
-          <input type="text" class="form-control" name="cov_module" id="coverageModule" aria-describedby="coverageModuleHelp" value="{{.job.CoverageModule}}">
-          <small id="coverageModuleHelp" class="form-text text-muted">Module(s) to collect coverage for</small>
+          <textarea class="form-control" name="cov_module" id="coverageModule" rows="2" aria-describedby="coverageModuleHelp" placeholder="module1.dll&#10;module2.dll">{{.job.CoverageModule}}</textarea>
+          <small id="coverageModuleHelp" class="form-text text-muted">Module(s) to collect coverage for. One per line (or comma-separated).</small>
         </div>
       </div>
 
@@ -396,7 +406,29 @@
             <input class="form-check-input" type="checkbox" name="ignore_hitcount" id="ignoreHitcount" value="1" {{if eq .job.IgnoreHitcount 1}}checked{{end}}>
             <label class="form-check-label" for="ignoreHitcount">Ignore hitcount</label>
           </div>
+          <div class="form-check form-switch mt-1">
+            <input class="form-check-input" type="checkbox" name="drio_persistence_in_app" id="drioPersistenceInApp" value="1" {{if eq .job.DrioPersistenceInApp 1}}checked{{end}}>
+            <label class="form-check-label" for="drioPersistenceInApp">DynamoRIO: <code>-persistence_mode in_app</code></label>
+          </div>
+          <div class="form-check form-switch mt-1">
+            <input class="form-check-input" type="checkbox" name="ti_persist" id="tinyPersist" value="1" {{if eq .job.TinyPersist 1}}checked{{end}}>
+            <label class="form-check-label" for="tinyPersist">TinyInst: <code>-persist</code></label>
+          </div>
+          <div class="form-check form-switch mt-1">
+            <input class="form-check-input" type="checkbox" name="ti_loop" id="tinyLoop" value="1" {{if eq .job.TinyLoop 1}}checked{{end}}>
+            <label class="form-check-label" for="tinyLoop">TinyInst: <code>-loop</code></label>
+          </div>
           <small class="form-text text-muted">Adds <code>-ignore_hitcount</code> to the WinAFL command line.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-2">
+      <div class="col-md-12">
+        <label for="instExtraArgs" class="col-md col-form-label">Instrumentation settings: extra args (before second <code>--</code>)</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="inst_extra_args" id="instExtraArgs" aria-describedby="instExtraArgsHelp" value="{{.job.InstExtraArgs}}">
+          <small id="instExtraArgsHelp" class="form-text text-muted">Optional. Appended right before the second <code>--</code> (i.e. before launching the target executable).</small>
         </div>
       </div>
     </div>

@@ -39,6 +39,11 @@ const (
 		"afl_f_mode" INTEGER,
 		"afl_f_dir" TEXT,
 		"afl_f_suffix" TEXT,
+		"drio_persistence_in_app" INTEGER,
+		"ti_persist" INTEGER,
+		"ti_loop" INTEGER,
+		"basic_extra_args" TEXT,
+		"inst_extra_args" TEXT,
 		"cov_type" TEXT NOT NULL,
 		"cov_module" TEXT NOT NULL,
 		"ignore_hitcount" INTEGER,
@@ -94,6 +99,11 @@ type Job struct {
 	AFLFMode       int    `json:"afl_f_mode" form:"afl_f_mode" stbl:"afl_f_mode"`
 	AFLFDir        string `json:"afl_f_dir" form:"afl_f_dir" stbl:"afl_f_dir"`
 	AFLFSuffix     string `json:"afl_f_suffix" form:"afl_f_suffix" stbl:"afl_f_suffix"`
+	DrioPersistenceInApp int `json:"drio_persistence_in_app" form:"drio_persistence_in_app" stbl:"drio_persistence_in_app"`
+	TinyPersist    int    `json:"ti_persist" form:"ti_persist" stbl:"ti_persist"`
+	TinyLoop       int    `json:"ti_loop" form:"ti_loop" stbl:"ti_loop"`
+	BasicExtraArgs string `json:"basic_extra_args" form:"basic_extra_args" stbl:"basic_extra_args"`
+	InstExtraArgs  string `json:"inst_extra_args" form:"inst_extra_args" stbl:"inst_extra_args"`
 	CoverageType   string `json:"cov_type" form:"cov_type" stbl:"cov_type"`
 	CoverageModule string `json:"cov_module" form:"cov_module" stbl:"cov_module"`
 	IgnoreHitcount int    `json:"ignore_hitcount" form:"ignore_hitcount" stbl:"ignore_hitcount"`
@@ -138,6 +148,12 @@ func newJob() *Job {
 	j.AFLFMode = 0
 	j.AFLFDir = ""
 	j.AFLFSuffix = ""
+	j.DrioPersistenceInApp = 0
+	// Preserve previous TinyInst defaults (persist+loop were always enabled).
+	j.TinyPersist = 1
+	j.TinyLoop = 1
+	j.BasicExtraArgs = ""
+	j.InstExtraArgs = ""
 	j.TargetArgs = ""
 	j.IgnoreHitcount = 0
 	j.CrashMode = 0
@@ -813,6 +829,9 @@ func editJob(c *gin.Context) {
 		j.Autoresume = 0
 		j.IgnoreHitcount = 0
 		j.AFLFMode = 0
+		j.DrioPersistenceInApp = 0
+		j.TinyPersist = 0
+		j.TinyLoop = 0
 		if err := c.ShouldBind(&j); err != nil {
 			otherError(c, map[string]string{
 				"title": title,
