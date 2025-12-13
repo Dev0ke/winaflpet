@@ -188,6 +188,40 @@ func getDB() squirrel.DBProxyBeginner {
 	if err := ensureUserColumns(con); err != nil {
 		log.Println(err)
 	}
+
+	// Fix NULLs in newly-added columns: database/sql cannot scan NULL into Go string/int.
+	// Users
+	_, _ = con.Exec("UPDATE users SET alert_apikey='' WHERE alert_apikey IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_agents='' WHERE alert_agents IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_jobs='' WHERE alert_jobs IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_interval_min=0 WHERE alert_interval_min IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_enabled=0 WHERE alert_enabled IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_check_agent=0 WHERE alert_check_agent IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_check_job=0 WHERE alert_check_job IS NULL")
+	_, _ = con.Exec("UPDATE users SET alert_check_crash=0 WHERE alert_check_crash IS NULL")
+
+	// Jobs (best-effort; ignore errors if columns don't exist yet)
+	nullTextCols := []string{
+		"env_vars",
+		"instrument_transitive",
+		"afl_f_dir",
+		"afl_f_suffix",
+		"analysis_script",
+		"analysis_windbg",
+		"analysis_target_binary",
+		"analysis_target_args",
+		"target_args",
+		"basic_extra_args",
+		"inst_extra_args",
+		"extras_dir",
+		"attach_lib",
+		"custom_lib",
+		"memory_limit",
+	}
+	for _, col := range nullTextCols {
+		_, _ = con.Exec("UPDATE jobs SET " + col + "='' WHERE " + col + " IS NULL")
+	}
+
 	cache := squirrel.NewStmtCacheProxy(con)
 
 	return cache

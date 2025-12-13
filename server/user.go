@@ -21,14 +21,14 @@ const (
 		"firstname" TEXT NOT NULL,
 		"lastname" TEXT NOT NULL,
 		"email" TEXT NOT NULL,
-		"alert_apikey" TEXT,
-		"alert_interval_min" INTEGER,
-		"alert_enabled" INTEGER,
-		"alert_check_agent" INTEGER,
-		"alert_check_job" INTEGER,
-		"alert_check_crash" INTEGER,
-		"alert_agents" TEXT,
-		"alert_jobs" TEXT
+		"alert_apikey" TEXT NOT NULL DEFAULT '',
+		"alert_interval_min" INTEGER NOT NULL DEFAULT 0,
+		"alert_enabled" INTEGER NOT NULL DEFAULT 0,
+		"alert_check_agent" INTEGER NOT NULL DEFAULT 0,
+		"alert_check_job" INTEGER NOT NULL DEFAULT 0,
+		"alert_check_crash" INTEGER NOT NULL DEFAULT 0,
+		"alert_agents" TEXT NOT NULL DEFAULT '',
+		"alert_jobs" TEXT NOT NULL DEFAULT ''
 	);`
 )
 
@@ -77,8 +77,10 @@ func initUser() {
 
 	db := getDB()
 	if _, err := sq.Insert("users").
-		Columns("username", "password", "firstname", "lastname", "email").
-		Values(DEFAULT_USER_NAME, password, "", "", "").
+		Columns("username", "password", "firstname", "lastname", "email",
+			"alert_apikey", "alert_interval_min", "alert_enabled", "alert_check_agent", "alert_check_job", "alert_check_crash", "alert_agents", "alert_jobs").
+		Values(DEFAULT_USER_NAME, password, "", "", "",
+			"", 0, 0, 0, 0, 0, "", "").
 		RunWith(db).Exec(); err != nil {
 		log.Fatal(err.Error())
 	}
