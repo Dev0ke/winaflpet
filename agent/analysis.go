@@ -119,9 +119,7 @@ func runAnalysisOnce(job Job) error {
 	if strings.TrimSpace(job.AnalysisScript) == "" {
 		return nil
 	}
-	if strings.TrimSpace(job.AnalysisWinDbg) == "" {
-		return nil
-	}
+
 
 	// Collect/normalize crashes first.
 	newCrashes, err := job.Collect()
@@ -163,7 +161,6 @@ func runAnalysisOnce(job Job) error {
 		job.AnalysisScript,
 		"-i", crashDir,
 		"-o", resultDir,
-		"-w", job.AnalysisWinDbg,
 		"-m", strconv.Itoa(mem),
 		"-t", strconv.Itoa(timeout),
 		"-r", strconv.Itoa(retries),

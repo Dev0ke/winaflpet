@@ -184,6 +184,8 @@ func setupRouter() *gin.Engine {
 				downloadJob(c)
 			case "analysis":
 				analysisJob(c)
+			case "analysis_download_crash":
+				analysisDownloadCrashGet(c)
 			default:
 				notFound(c)
 			}

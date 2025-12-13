@@ -53,7 +53,8 @@ $(function () {
         }
     }
 
-    $("a.action").click(function(e) {
+    // Use event delegation so dynamically-created action links also work.
+    $(document).on("click", "a.action", function(e) {
         var isCustom = $(this).attr("data-method");
         var isDisabled = $(this).is("a.disabled");
 
@@ -179,9 +180,9 @@ $(function () {
                 var hash = f;
 
                 var btns = $('<div class="btn-group"></div>');
-                var dl = $('<a class="btn btn-outline-secondary action download" data-type="binary" data-method="POST" href="/job/' + guid + '/analysis_download_crash"></a>');
+                // Download should work even if JS is cached/broken: use a plain GET link with query param.
+                var dl = $('<a class="btn btn-outline-secondary download" href="/job/' + guid + '/analysis_download_crash?hash=' + encodeURIComponent(hash) + '"></a>');
                 dl.append('<svg class="bi bi-download" width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><use xlink:href="/static/svg/bootstrap-icons.svg#download"/></svg>');
-                dl.data("payload", JSON.stringify({hash: hash}));
 
                 var del = $('<a class="btn btn-outline-secondary action delete" data-method="POST" href="/job/' + guid + '/analysis_delete"></a>');
                 del.append('<svg class="bi bi-trash-fill" width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><use xlink:href="/static/svg/bootstrap-icons.svg#trash-fill"/></svg>');

@@ -54,6 +54,7 @@ func analysisListBuckets(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+	_ = logger.Infof("ANALYSIS api=buckets guid=%s", j.GUID.String())
 
 	_, resultDir := analysisBaseDirs(j)
 	entries, err := os.ReadDir(resultDir)
@@ -81,6 +82,7 @@ func analysisListFiles(c *gin.Context) {
 
 	var req AnalysisListRequest
 	_ = c.ShouldBindJSON(&req)
+	_ = logger.Infof("ANALYSIS api=files guid=%s bucket=%q", j.GUID.String(), req.Bucket)
 	bucket, err := safeBaseName(req.Bucket)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -118,6 +120,7 @@ func analysisReadFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	_ = logger.Infof("ANALYSIS api=read guid=%s bucket=%q file=%q", j.GUID.String(), req.Bucket, req.File)
 	bucket, err := safeBaseName(req.Bucket)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -151,6 +154,7 @@ func analysisDeleteFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	_ = logger.Infof("ANALYSIS api=delete guid=%s bucket=%q file=%q", j.GUID.String(), req.Bucket, req.File)
 	bucket, err := safeBaseName(req.Bucket)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -183,6 +187,7 @@ func analysisDownloadCrash(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	_ = logger.Infof("ANALYSIS api=download_crash guid=%s hash=%q", j.GUID.String(), req.Hash)
 	hash, err := safeBaseName(req.Hash)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

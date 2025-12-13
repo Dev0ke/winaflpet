@@ -167,6 +167,32 @@ func analysisDownloadCrash(c *gin.Context) {
 		return
 	}
 
+	analysisDownloadCrashFromHash(c, strings.TrimSpace(req.Hash))
+}
+
+// GET variant used by the Analysis UI download link:
+// /job/:guid/analysis_download_crash?hash=<hash>
+func analysisDownloadCrashGet(c *gin.Context) {
+	hash := strings.TrimSpace(c.Query("hash"))
+	if hash == "" {
+		notFound(c)
+		return
+	}
+	// Reuse POST implementation by creating the same request structure.
+	c.Set("analysis_hash", hash)
+	analysisDownloadCrashFromHash(c, hash)
+}
+
+func analysisDownloadCrashFromHash(c *gin.Context, hash string) {
+	j := newJob()
+	j.GUID, _ = xid.FromString(c.Param("guid"))
+	if err := j.LoadByGUID(); err != nil {
+		otherError(c, map[string]string{"alert": err.Error()})
+		return
+	}
+	a, _ := j.GetAgent()
+
+	req := analysisDownloadReq{Hash: hash}
 	request := gorequest.New()
 	request.Debug = false
 	targetURL := "http://" + a.Host + ":" + strconv.Itoa(a.Port) + "/job/" + j.GUID.String() + "/analysis_download_crash"
@@ -181,7 +207,6 @@ func analysisDownloadCrash(c *gin.Context) {
 		return
 	}
 
-	// Pass-through as binary. Use hash as filename.
 	filename := strings.TrimSpace(req.Hash)
 	if filename == "" {
 		filename = "crash.bin"
