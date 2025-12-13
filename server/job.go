@@ -7,7 +7,6 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"net/mail"
 	"regexp"
 	"strconv"
 	"strings"
@@ -282,6 +281,27 @@ func loadJobs() ([]*Job, error) {
 
 	// Because we get back a []Recorder, we need to get the original data
 	// back out. We have to manually convert it back to its real type.
+	jobs := make([]*Job, len(items))
+	for i, item := range items {
+		jobs[i] = item.Interface().(*Job)
+	}
+
+	return jobs, err
+}
+
+func loadAllJobs() ([]*Job, error) {
+	j := &Job{}
+	sj := structable.New(db, DB_FLAVOR).Bind(TB_NAME_JOBS, j)
+
+	fn := func(d structable.Describer, q squirrel.SelectBuilder) (squirrel.SelectBuilder, error) {
+		return q.Limit(1000), nil
+	}
+
+	items, err := listWhere(sj, fn)
+	if err != nil {
+		return []*Job{}, err
+	}
+
 	jobs := make([]*Job, len(items))
 	for i, item := range items {
 		jobs[i] = item.Interface().(*Job)
@@ -1017,10 +1037,9 @@ func alertJob(c *gin.Context) {
 	user.UserName = claims[identityKey].(string)
 	user.LoadByUsername()
 
-	m, err := mail.ParseAddress(user.Email)
-	if err != nil {
+	if strings.TrimSpace(user.AlertAPIKey) == "" || user.AlertIntervalMin <= 0 {
 		otherError(c, map[string]string{
-			"alert": err.Error(),
+			"alert": "Alert is not configured. Please set API key and interval in your profile.",
 		})
 		return
 	}
@@ -1028,7 +1047,7 @@ func alertJob(c *gin.Context) {
 	if ok, _ := alert.FindJob(j.GUID); !ok {
 		alert.AddJob(*j)
 
-		go alert.Monitor(*j, m)
+		go alert.Monitor(*j, user)
 
 		c.JSON(http.StatusOK, gin.H{
 			"alert":   fmt.Sprintf("Alerts have been enabled for job %s", j.Name),

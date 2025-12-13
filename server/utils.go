@@ -49,6 +49,21 @@ func fileEmpty(filename string) bool {
 	return true
 }
 
+// csvHas checks whether value is present as a full token in a comma-separated list.
+func csvHas(csv string, value string) bool {
+	csv = strings.TrimSpace(csv)
+	value = strings.TrimSpace(value)
+	if csv == "" || value == "" {
+		return false
+	}
+	for _, t := range strings.Split(csv, ",") {
+		if strings.TrimSpace(t) == value {
+			return true
+		}
+	}
+	return false
+}
+
 func formatDuration(timestamp int) string {
 	if timestamp == 0 {
 		return "N/A"

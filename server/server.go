@@ -24,6 +24,7 @@ func customHTMLRender() multitemplate.Renderer {
 		"seq":            seq,
 		"isActive":       isActive,
 		"hasStatus":      hasStatus,
+		"csvHas":         csvHas,
 		"getVersion":     getVersion,
 		"totalPages":     totalPages,
 		"formatNumber":   formatNumber,
@@ -153,6 +154,7 @@ func setupRouter() *gin.Engine {
 
 		r.GET("/user/edit", editUser)
 		r.POST("/user/edit", editUser)
+		r.POST("/user/alert_test", alertTestUser)
 		r.GET("/user/logout", auth.LogoutHandler)
 		r.POST("/user/refresh", auth.RefreshHandler)
 

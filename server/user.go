@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -19,7 +20,15 @@ const (
 		"password" TEXT NOT NULL,
 		"firstname" TEXT NOT NULL,
 		"lastname" TEXT NOT NULL,
-		"email" TEXT NOT NULL
+		"email" TEXT NOT NULL,
+		"alert_apikey" TEXT,
+		"alert_interval_min" INTEGER,
+		"alert_enabled" INTEGER,
+		"alert_check_agent" INTEGER,
+		"alert_check_job" INTEGER,
+		"alert_check_crash" INTEGER,
+		"alert_agents" TEXT,
+		"alert_jobs" TEXT
 	);`
 )
 
@@ -33,6 +42,14 @@ type User struct {
 	FirstName               string `json:"firstname" form:"firstname" stbl:"firstname"`
 	LastName                string `json:"lastname" form:"lastname" stbl:"lastname"`
 	Email                   string `json:"email" form:"email" stbl:"email"`
+	AlertAPIKey             string `json:"alert_apikey" form:"alert_apikey" stbl:"alert_apikey"`
+	AlertIntervalMin        int    `json:"alert_interval_min" form:"alert_interval_min" stbl:"alert_interval_min"`
+	AlertEnabled            int    `json:"alert_enabled" form:"alert_enabled" stbl:"alert_enabled"`
+	AlertCheckAgent         int    `json:"alert_check_agent" form:"alert_check_agent" stbl:"alert_check_agent"`
+	AlertCheckJob           int    `json:"alert_check_job" form:"alert_check_job" stbl:"alert_check_job"`
+	AlertCheckCrash         int    `json:"alert_check_crash" form:"alert_check_crash" stbl:"alert_check_crash"`
+	AlertAgents             string `json:"alert_agents" form:"alert_agents" stbl:"alert_agents"`
+	AlertJobs               string `json:"alert_jobs" form:"alert_jobs" stbl:"alert_jobs"`
 }
 
 func newUser() *User {
@@ -77,11 +94,16 @@ func editUser(c *gin.Context) {
 	user.UserName = claims[identityKey].(string)
 	user.LoadByUsername()
 
+	agents, _ := loadAgents()
+	jobs, _ := loadAllJobs()
+
 	switch c.Request.Method {
 	case http.MethodGet:
 		c.HTML(http.StatusOK, "user_edit", gin.H{
 			"title": title,
 			"user":  user,
+			"agents": agents,
+			"jobs":   jobs,
 			"path":  c.Request.URL.Path,
 		})
 		return
@@ -91,6 +113,8 @@ func editUser(c *gin.Context) {
 				"title":   title,
 				"alert":   "Password invalid!",
 				"user":    user,
+				"agents":  agents,
+				"jobs":    jobs,
 				"context": "danger",
 				"path":    c.Request.URL.Path,
 			})
@@ -98,15 +122,30 @@ func editUser(c *gin.Context) {
 		}
 
 		oriPassword := user.Password
+		oriAlertAPIKey := user.AlertAPIKey
 		if err := c.ShouldBind(&user); err != nil {
-			otherError(c, map[string]string{
-				"title":    title,
-				"alert":    err.Error(),
-				"template": "user_edit",
+			c.HTML(http.StatusOK, "user_edit", gin.H{
+				"title":   title,
+				"alert":   err.Error(),
+				"user":    user,
+				"agents":  agents,
+				"jobs":    jobs,
+				"context": "danger",
+				"path":    c.Request.URL.Path,
 			})
 			return
 		}
 		user.Password = oriPassword
+		// Do not clear the API key if the field is left blank.
+		if strings.TrimSpace(user.AlertAPIKey) == "" {
+			user.AlertAPIKey = oriAlertAPIKey
+		} else {
+			user.AlertAPIKey = strings.TrimSpace(user.AlertAPIKey)
+		}
+
+		// Multi-select monitoring targets are posted as arrays; store as CSV in DB.
+		user.AlertAgents = strings.Join(c.PostFormArray("monitor_agents"), ",")
+		user.AlertJobs = strings.Join(c.PostFormArray("monitor_jobs"), ",")
 
 		if user.NewPassword != "" {
 			if user.NewPassword != user.NewPasswordConfirmation {
@@ -114,6 +153,8 @@ func editUser(c *gin.Context) {
 					"title":   title,
 					"alert":   "The password confirmation does not match.",
 					"user":    user,
+					"agents":  agents,
+					"jobs":    jobs,
 					"context": "danger",
 					"path":    c.Request.URL.Path,
 				})
@@ -127,6 +168,8 @@ func editUser(c *gin.Context) {
 				"title":   title,
 				"alert":   err.Error(),
 				"user":    user,
+				"agents":  agents,
+				"jobs":    jobs,
 				"context": "danger",
 				"path":    c.Request.URL.Path,
 			})
@@ -137,6 +180,8 @@ func editUser(c *gin.Context) {
 			"title":   title,
 			"alert":   "User profile successfully updated.",
 			"user":    user,
+			"agents":  agents,
+			"jobs":    jobs,
 			"context": "success",
 			"path":    c.Request.URL.Path,
 		})

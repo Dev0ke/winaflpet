@@ -114,6 +114,9 @@ func main() {
 	f, _ := os.Create(filepath.Join(viper.GetString("data.dir"), viper.GetString("log")))
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 
+	// Start background monitoring scheduler (Server酱 alerts).
+	go startAlertScheduler()
+
 	r := setupRouter()
 	addr := fmt.Sprintf("%s:%d", viper.GetString("server.host"), viper.GetInt("server.port"))
 	if err := r.Run(addr); err != nil {

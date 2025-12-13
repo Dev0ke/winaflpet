@@ -74,6 +74,94 @@
 
   </fieldset>
 
+  <fieldset class="row mb-3">
+  <legend>Alert (Server酱 Turbo)</legend>
+
+    <div class="row ms-0">
+      <div class="col-md">
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" value="1" id="alert_enabled" name="alert_enabled" {{if eq .user.AlertEnabled 1}}checked{{end}}>
+          <label class="form-check-label" for="alert_enabled">
+            Enable monitoring
+          </label>
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" value="1" id="alert_check_agent" name="alert_check_agent" {{if eq .user.AlertCheckAgent 1}}checked{{end}}>
+          <label class="form-check-label" for="alert_check_agent">Monitor Agent status</label>
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" value="1" id="alert_check_job" name="alert_check_job" {{if eq .user.AlertCheckJob 1}}checked{{end}}>
+          <label class="form-check-label" for="alert_check_job">Monitor Job running status</label>
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" value="1" id="alert_check_crash" name="alert_check_crash" {{if eq .user.AlertCheckCrash 1}}checked{{end}}>
+          <label class="form-check-label" for="alert_check_crash">Monitor Crash</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0">
+      <div class="col-md">
+        <label for="alert_apikey" class="col-md col-form-label">API Key</label>
+        <div class="col-md">
+          <input type="password" class="form-control" name="alert_apikey" id="alert_apikey" placeholder="****">
+          <small class="text-body-secondary">Push URL: https://sctapi.ftqq.com/****.send (channel=9)</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0">
+      <div class="col-md">
+        <label for="alert_interval_min" class="col-md col-form-label">Check interval (minutes)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="alert_interval_min" id="alert_interval_min" min="1" value="{{if gt .user.AlertIntervalMin 0}}{{.user.AlertIntervalMin}}{{else}}10{{end}}">
+          <small class="text-body-secondary">Minutes (min=1)</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-2">
+      <div class="col-md">
+        <a href="/user/alert_test" class="btn btn-outline-secondary action" data-method="POST">Test push</a>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-4">
+      <div class="col-md">
+        <h6>Agents to monitor</h6>
+        <div class="list-group">
+          {{range .agents}}
+            <label class="list-group-item">
+              <input class="form-check-input me-1" type="checkbox" name="monitor_agents" value="{{.GUID}}" {{if csvHas $.user.AlertAgents (printf "%s" .GUID)}}checked{{end}}>
+              {{.Name}} <small class="text-body-secondary">({{.Host}}:{{.Port}})</small>
+            </label>
+          {{end}}
+          {{if not .agents}}
+            <div class="list-group-item text-body-secondary">No agents.</div>
+          {{end}}
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-4">
+      <div class="col-md">
+        <h6>Jobs to monitor</h6>
+        <div class="list-group">
+          {{range .jobs}}
+            <label class="list-group-item">
+              <input class="form-check-input me-1" type="checkbox" name="monitor_jobs" value="{{.GUID}}" {{if csvHas $.user.AlertJobs (printf "%s" .GUID)}}checked{{end}}>
+              {{.Name}} <small class="text-body-secondary">(cores={{.Cores}})</small>
+            </label>
+          {{end}}
+          {{if not .jobs}}
+            <div class="list-group-item text-body-secondary">No jobs.</div>
+          {{end}}
+        </div>
+      </div>
+    </div>
+
+  </fieldset>
+
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 {{end}}

@@ -86,11 +86,7 @@
             </a>
             {{end}}
             {{if not (.HasAlert) }}
-            <a href="/job/{{.GUID}}/alert" class="btn btn-outline-secondary action alarm {{if (eq .Status 0) }}disabled{{end}}" data-method="POST">
-              <svg class="bi alarm-fill" width="20" height="20" fill="currentColor" color="green"  viewBox="0 0 20 20">
-                <use xlink:href="/static/svg/bootstrap-icons.svg#alarm-fill"/>
-              </svg>
-            </a>
+            {{/* Monitoring is configured in Profile now. */}}
             {{end}}
             <a href="/job/{{.GUID}}/download" class="btn btn-outline-secondary action download">
               <svg class="bi bi-download" width="20" height="20" fill="currentColor" color="#e67e22" viewBox="0 0 20 20">

@@ -131,6 +131,42 @@ func ensureJobColumns(con *sql.DB) error {
 	return nil
 }
 
+func ensureUserColumns(con *sql.DB) error {
+	cols, err := tableColumns(con, TB_NAME_USERS)
+	if err != nil {
+		return err
+	}
+
+	type colSpec struct {
+		name string
+		ddl  string
+	}
+
+	need := []colSpec{
+		{name: "alert_apikey", ddl: "ALTER TABLE users ADD COLUMN alert_apikey TEXT"},
+		{name: "alert_interval_min", ddl: "ALTER TABLE users ADD COLUMN alert_interval_min INTEGER"},
+		{name: "alert_enabled", ddl: "ALTER TABLE users ADD COLUMN alert_enabled INTEGER"},
+		{name: "alert_check_agent", ddl: "ALTER TABLE users ADD COLUMN alert_check_agent INTEGER"},
+		{name: "alert_check_job", ddl: "ALTER TABLE users ADD COLUMN alert_check_job INTEGER"},
+		{name: "alert_check_crash", ddl: "ALTER TABLE users ADD COLUMN alert_check_crash INTEGER"},
+		{name: "alert_agents", ddl: "ALTER TABLE users ADD COLUMN alert_agents TEXT"},
+		{name: "alert_jobs", ddl: "ALTER TABLE users ADD COLUMN alert_jobs TEXT"},
+	}
+
+	for _, c := range need {
+		if cols[c.name] {
+			continue
+		}
+		if _, err := con.Exec(c.ddl); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
 func getDB() squirrel.DBProxyBeginner {
 	dataType := DB_FLAVOR
 	dataDir := viper.GetString("data.dir")
@@ -145,6 +181,9 @@ func getDB() squirrel.DBProxyBeginner {
 	con, _ := sql.Open(dataType, dataSrc)
 	// Best-effort migrations for existing databases.
 	if err := ensureJobColumns(con); err != nil {
+		log.Println(err)
+	}
+	if err := ensureUserColumns(con); err != nil {
 		log.Println(err)
 	}
 	cache := squirrel.NewStmtCacheProxy(con)
