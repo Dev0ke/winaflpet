@@ -123,7 +123,7 @@ func (j Job) Start(fID int) error {
 		j.TargetModule = sequentialName(j.TargetModule, fID)
 	}
 
-	targetApp = targetCmd
+	targetApp := targetCmd
 
 
 	envs := os.Environ()
