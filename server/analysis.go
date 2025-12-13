@@ -159,7 +159,6 @@ func analysisDownloadCrash(c *gin.Context) {
 		otherError(c, map[string]string{"alert": err.Error()})
 		return
 	}
-	a, _ := j.GetAgent()
 
 	var req analysisDownloadReq
 	if err := c.ShouldBindJSON(&req); err != nil {
