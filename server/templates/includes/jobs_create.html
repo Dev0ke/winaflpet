@@ -62,6 +62,8 @@
 
   </fieldset>
 
+  <hr class="my-4">
+
   <fieldset class="row mb-3">
     <legend>Tool locations</legend>
     <div class="row ms-0">
@@ -100,6 +102,8 @@
 
     </div>
   </fieldset>
+
+  <hr class="my-4">
 
   <fieldset class="row mb-3">
     <legend>Basic parameters</legend>
@@ -205,59 +209,6 @@
       </div>
     </div>
 
-    <div class="row ms-0 mt-3">
-      <div class="col-md-12">
-        <h6>Analysis (Python + WinDbg)</h6>
-      </div>
-      <div class="col-md">
-        <label for="analysisScript" class="col-md col-form-label">Python analysis script path</label>
-        <div class="col-md">
-          <input type="text" class="form-control" name="analysis_script" id="analysisScript" placeholder="C:\tools\ana.py">
-          <small class="form-text text-muted">Executed as <code>python.exe &lt;script&gt; ...</code> (python.exe is resolved from environment PATH on the agent).</small>
-        </div>
-      </div>
-      <div class="col-md">
-        <label for="analysisWinDbg" class="col-md col-form-label">WinDbg (cdb.exe) path</label>
-        <div class="col-md">
-          <input type="text" class="form-control" name="analysis_windbg" id="analysisWinDbg" placeholder="C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe">
-        </div>
-      </div>
-      <div class="col-md">
-        <label for="analysisMem" class="col-md col-form-label">Memory limit (MB)</label>
-        <div class="col-md">
-          <input type="number" class="form-control" name="analysis_mem" id="analysisMem" value="1600">
-        </div>
-      </div>
-      <div class="col-md">
-        <label for="analysisTimeout" class="col-md col-form-label">Timeout (s)</label>
-        <div class="col-md">
-          <input type="number" class="form-control" name="analysis_timeout" id="analysisTimeout" value="60">
-        </div>
-      </div>
-    </div>
-
-    <div class="row ms-0 mt-2">
-      <div class="col-md">
-        <label for="analysisRetries" class="col-md col-form-label">Retries</label>
-        <div class="col-md">
-          <input type="number" class="form-control" name="analysis_retries" id="analysisRetries" value="2">
-        </div>
-      </div>
-      <div class="col-md">
-        <label for="analysisInterval" class="col-md col-form-label">Analysis interval (minutes)</label>
-        <div class="col-md">
-          <input type="number" class="form-control" name="analysis_interval_min" id="analysisInterval" value="0">
-          <small class="form-text text-muted">0 disables. Runs only while the job is running on the agent.</small>
-        </div>
-      </div>
-      <div class="col-3 d-flex align-items-end">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" name="analysis_pageheap" id="analysisPageHeap" value="1">
-          <label class="form-check-label" for="analysisPageHeap">Enable PageHeap</label>
-        </div>
-      </div>
-    </div>
-
     <div class="row ms-0 mt-2">
       <div class="col-md-12">
         <label for="basicExtraArgs" class="col-md col-form-label">Basic parameters: extra args (before first <code>--</code>)</label>
@@ -349,6 +300,8 @@
     </div>
   </fieldset>
 
+  <hr class="my-4">
+
   <fieldset class="row mb-3">
     <legend>Environment variables</legend>
 
@@ -403,6 +356,8 @@
     </div>
 
   </fieldset>
+
+  <hr class="my-4">
 
   <fieldset class="row mb-3">
     <legend>Instrumentation settings</legend>
@@ -525,6 +480,8 @@
     </div>
   </fieldset>
 
+  <hr class="my-4">
+
   <fieldset class="row mb-3">
     <legend>Target application</legend>
 
@@ -555,6 +512,69 @@
         <div class="col-md">
           <input type="text" class="form-control" name="target_args" id="targetArgs" aria-describedby="targetArgsHelp" placeholder='e.g. -oice @@ @@x'>
           <small id="targetArgsHelp" class="form-text text-muted">Optional. If set, this overrides the args from the command line above. When AFL <code>-f</code> mode is enabled, <code>@@</code> (and <code>@@x</code>) will be replaced with the generated absolute file path (and path + suffix).</small>
+        </div>
+      </div>
+    </div>
+  </fieldset>
+
+  <hr class="my-4">
+
+  <fieldset class="row mb-3">
+    <legend>Analysis</legend>
+
+    <div class="row ms-0">
+      <div class="col-md">
+        <label for="analysisScript" class="col-md col-form-label">Python analysis script path</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="analysis_script" id="analysisScript" placeholder="C:\tools\ana.py">
+          <small class="form-text text-muted">Executed as <code>python.exe &lt;script&gt; ...</code> (python.exe is resolved from environment PATH on the agent).</small>
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label for="analysisWinDbg" class="col-md col-form-label">WinDbg (cdb.exe) path</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="analysis_windbg" id="analysisWinDbg" placeholder="C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe">
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-2">
+      <div class="col-md">
+        <label for="analysisMem" class="col-md col-form-label">Memory limit (MB)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_mem" id="analysisMem" value="1600">
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label for="analysisTimeout" class="col-md col-form-label">Timeout (s)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_timeout" id="analysisTimeout" value="60">
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label for="analysisRetries" class="col-md col-form-label">Retries</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_retries" id="analysisRetries" value="2">
+        </div>
+      </div>
+
+      <div class="col-md">
+        <label for="analysisInterval" class="col-md col-form-label">Analysis interval (minutes)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_interval_min" id="analysisInterval" value="0">
+          <small class="form-text text-muted">0 disables. Runs only while the job is running on the agent.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-2">
+      <div class="col-3">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="analysis_pageheap" id="analysisPageHeap" value="1">
+          <label class="form-check-label" for="analysisPageHeap">Enable PageHeap</label>
         </div>
       </div>
     </div>
