@@ -100,17 +100,15 @@ func normalizeExtWithDot(s string) string {
 }
 
 func buildTargetArgsForScript(j Job) ([]string, error) {
-	// Use the raw user-provided strings; we still must split into argv.
-	cmd, args := splitCmdLine(j.TargetApp)
-	if strings.TrimSpace(cmd) == "" {
-		return nil, errors.New("target_app is empty")
+	// Analysis uses dedicated targetBinary/targetArgs and must not reuse fuzzing target args.
+	bin := strings.TrimSpace(j.AnalysisTargetBinary)
+	if bin == "" {
+		return nil, errors.New("analysis_target_binary is empty")
 	}
-
-	out := []string{cmd}
-	if strings.TrimSpace(j.TargetArgs) != "" {
-		out = append(out, strings.Fields(strings.TrimSpace(j.TargetArgs))...)
-	} else if strings.TrimSpace(args) != "" {
-		out = append(out, strings.Fields(strings.TrimSpace(args))...)
+	out := []string{bin}
+	if strings.TrimSpace(j.AnalysisTargetArgs) != "" {
+		// No @@ expansion for analysis; pass raw argv tokens.
+		out = append(out, strings.Fields(strings.TrimSpace(j.AnalysisTargetArgs))...)
 	}
 	return out, nil
 }

@@ -54,6 +54,8 @@ type Job struct {
 	AnalysisPageHeap    int    `json:"analysis_pageheap"`
 	AnalysisRetries     int    `json:"analysis_retries"`
 	AnalysisIntervalMin int    `json:"analysis_interval_min"`
+	AnalysisTargetBinary string `json:"analysis_target_binary"`
+	AnalysisTargetArgs   string `json:"analysis_target_args"`
 	DrioPersistenceInApp int `json:"drio_persistence_in_app"`
 	TinyPersist    int    `json:"ti_persist"`
 	TinyLoop       int    `json:"ti_loop"`

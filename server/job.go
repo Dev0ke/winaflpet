@@ -45,6 +45,8 @@ const (
 		"analysis_pageheap" INTEGER,
 		"analysis_retries" INTEGER,
 		"analysis_interval_min" INTEGER,
+		"analysis_target_binary" TEXT,
+		"analysis_target_args" TEXT,
 		"drio_persistence_in_app" INTEGER,
 		"ti_persist" INTEGER,
 		"ti_loop" INTEGER,
@@ -112,6 +114,8 @@ type Job struct {
 	AnalysisPageHeap    int    `json:"analysis_pageheap" form:"analysis_pageheap" stbl:"analysis_pageheap"`
 	AnalysisRetries     int    `json:"analysis_retries" form:"analysis_retries" stbl:"analysis_retries"`
 	AnalysisIntervalMin int    `json:"analysis_interval_min" form:"analysis_interval_min" stbl:"analysis_interval_min"`
+	AnalysisTargetBinary string `json:"analysis_target_binary" form:"analysis_target_binary" stbl:"analysis_target_binary"`
+	AnalysisTargetArgs   string `json:"analysis_target_args" form:"analysis_target_args" stbl:"analysis_target_args"`
 	DrioPersistenceInApp int `json:"drio_persistence_in_app" form:"drio_persistence_in_app" stbl:"drio_persistence_in_app"`
 	TinyPersist    int    `json:"ti_persist" form:"ti_persist" stbl:"ti_persist"`
 	TinyLoop       int    `json:"ti_loop" form:"ti_loop" stbl:"ti_loop"`

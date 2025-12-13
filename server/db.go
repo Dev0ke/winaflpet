@@ -108,6 +108,8 @@ func ensureJobColumns(con *sql.DB) error {
 		{name: "analysis_pageheap", ddl: "ALTER TABLE jobs ADD COLUMN analysis_pageheap INTEGER"},
 		{name: "analysis_retries", ddl: "ALTER TABLE jobs ADD COLUMN analysis_retries INTEGER"},
 		{name: "analysis_interval_min", ddl: "ALTER TABLE jobs ADD COLUMN analysis_interval_min INTEGER"},
+		{name: "analysis_target_binary", ddl: "ALTER TABLE jobs ADD COLUMN analysis_target_binary TEXT"},
+		{name: "analysis_target_args", ddl: "ALTER TABLE jobs ADD COLUMN analysis_target_args TEXT"},
 		{name: "target_args", ddl: "ALTER TABLE jobs ADD COLUMN target_args TEXT"},
 		{name: "drio_persistence_in_app", ddl: "ALTER TABLE jobs ADD COLUMN drio_persistence_in_app INTEGER"},
 		{name: "ti_persist", ddl: "ALTER TABLE jobs ADD COLUMN ti_persist INTEGER"},
