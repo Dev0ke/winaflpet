@@ -123,11 +123,8 @@ func (j Job) Start(fID int) error {
 		j.TargetModule = sequentialName(j.TargetModule, fID)
 	}
 
-	targetApp, err := exec.LookPath(targetCmd)
-	if err != nil {
-		logger.Error(err)
-		return err
-	}
+	targetApp = targetCmd
+
 
 	envs := os.Environ()
 	// Merge in HKLM system environment variables (best-effort). This helps when the
