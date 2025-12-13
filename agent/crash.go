@@ -123,15 +123,18 @@ func verifyCrash(c *gin.Context) {
 		})
 		return
 	}
+	_ = logger.Infof("CRASH verify request jguid=%s fuzzerid=%q args=%q", crash.JobGUID.String(), crash.FuzzerID, crash.Args)
 
 	crash, err := crash.Verify()
 	if err != nil {
+		_ = logger.Infof("CRASH verify jguid=%s error: %v", crash.JobGUID.String(), err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
+	_ = logger.Infof("CRASH verify jguid=%s bugid=%q mod=%q func=%q", crash.JobGUID.String(), crash.BugID, crash.Module, crash.Function)
 	c.JSON(http.StatusOK, crash)
 }
 

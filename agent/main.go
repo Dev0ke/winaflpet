@@ -68,12 +68,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Also log to file (default: C:\winaflpet-agent.log, fallback: %TEMP%\winaflpet-agent.log).
+	logger = wrapLoggerWithFile(logger)
 
 	go func() {
 		for {
 			err := <-errs
 			if err != nil {
-				log.Print(err)
+				_ = logger.Error(err)
 			}
 		}
 	}()

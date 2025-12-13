@@ -199,6 +199,7 @@ func (j Job) Start(fID int) error {
 		fuzzFilePath := filepath.Clean(filepath.Join(dir, r4+strings.TrimSpace(j.AFLFSuffix)))
 		args = append(args, fmt.Sprintf("-f %s", quoteWindowsArg(fuzzFilePath)))
 		targetArgs = expandAtArgs(targetArgs, fuzzFilePath)
+		_ = logger.Infof("JOB start guid=%s fid=%d afl_f_mode=1 fuzz_file=%q", j.GUID.String(), fID, fuzzFilePath)
 	}
 
 	// Delivery mode: shared memory option is controlled by afl-fuzz "-s".
@@ -308,8 +309,12 @@ func (j Job) Start(fID int) error {
 	}
 
 	args = append(args, fmt.Sprintf("-target_module %s", j.TargetModule))
-	args = append(args, fmt.Sprintf("-target_method %s", j.TargetMethod))
-	args = append(args, fmt.Sprintf("-target_offset %s", j.TargetOffset))
+	if j.TargetMethod != "" {
+		args = append(args, fmt.Sprintf("-target_method %s", j.TargetMethod))
+	}
+	if j.TargetOffset != "" {
+		args = append(args, fmt.Sprintf("-target_offset %s", j.TargetOffset))
+	}
 	args = append(args, fmt.Sprintf("-nargs %d", j.TargetNArgs))
 
 	if strings.TrimSpace(j.InstExtraArgs) != "" {
@@ -325,6 +330,7 @@ func (j Job) Start(fID int) error {
 	cmd.Env = envs
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
 	cmd.SysProcAttr.CmdLine = strings.Join(cmd.Args, ` `)
+	_ = logger.Infof("JOB start guid=%s fid=%d cmd=%s", j.GUID.String(), fID, cmd.SysProcAttr.CmdLine)
 	stdoutPipe, _ := cmd.StdoutPipe()
 	stdoutReader := bufio.NewReader(stdoutPipe)
 
@@ -392,9 +398,10 @@ func (j Job) View() ([]Stats, error) {
 		fileName := joinPath(j.AFLDir, j.Output, fuzzerID, AFL_STATS_FILE)
 
 		if !fileExists(fileName) {
-			text := fmt.Sprintf("Statistics are unavailable for fuzzer instance #%d in job %s", c, j.Name)
-			err := errors.New(text)
-			return stats, err
+			// In multi-core mode the UI can start instances one-by-one. Do not fail the
+			// entire view if some instances are not running yet.
+			_ = logger.Infof("JOB view guid=%s missing stats for fid=%d fuzzer=%q file=%q", j.GUID.String(), c, fuzzerID, fileName)
+			continue
 		}
 
 		content, err := os.ReadFile(fileName)
@@ -408,6 +415,10 @@ func (j Job) View() ([]Stats, error) {
 		}
 
 		stats = append(stats, newStats)
+	}
+
+	if len(stats) == 0 {
+		return stats, errors.New("statistics are not yet available")
 	}
 
 	return stats, nil
@@ -463,6 +474,7 @@ func (j Job) Collect() ([]Crash, error) {
 
 func startJob(c *gin.Context) {
 	j := newJob(c.Param("guid"))
+	_ = logger.Infof("JOB start request guid=%s", c.Param("guid"))
 
 	fID, err := strconv.Atoi(c.DefaultQuery("fid", "1"))
 	if err != nil {
@@ -480,6 +492,8 @@ func startJob(c *gin.Context) {
 		})
 		return
 	}
+	_ = logger.Infof("JOB start payload guid=%s fid=%d name=%q cores=%d inst=%s deliv=%s afl_dir=%q target_app=%q target_args=%q",
+		j.GUID.String(), fID, j.Name, j.Cores, j.InstMode, j.DelivMode, j.AFLDir, j.TargetApp, j.TargetArgs)
 
 	if err := j.Start(fID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -502,12 +516,14 @@ func startJob(c *gin.Context) {
 func stopJob(c *gin.Context) {
 	j, i, err := project.GetJob(c.Param("guid"))
 	if err != nil {
+		_ = logger.Infof("JOB stop request guid=%s not-found: %v", c.Param("guid"), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"guid":  c.Param("guid"),
 			"error": err.Error(),
 		})
 		return
 	}
+	_ = logger.Infof("JOB stop request guid=%s name=%q", j.GUID.String(), j.Name)
 
 	if err := j.Stop(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -528,15 +544,18 @@ func stopJob(c *gin.Context) {
 func viewJob(c *gin.Context) {
 	j, _, err := project.GetJob(c.Param("guid"))
 	if err != nil {
+		_ = logger.Infof("JOB view request guid=%s not-found: %v", c.Param("guid"), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"guid":  c.Param("guid"),
 			"error": err.Error(),
 		})
 		return
 	}
+	_ = logger.Infof("JOB view request guid=%s name=%q", j.GUID.String(), j.Name)
 
 	Stats, err := j.View()
 	if err != nil {
+		_ = logger.Infof("JOB view guid=%s error: %v", j.GUID.String(), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"guid":  j.GUID,
 			"error": err.Error(),
@@ -544,6 +563,7 @@ func viewJob(c *gin.Context) {
 		return
 	}
 
+	_ = logger.Infof("JOB view guid=%s returned %d stats", j.GUID.String(), len(Stats))
 	c.JSON(http.StatusOK, Stats)
 }
 
@@ -552,6 +572,7 @@ func checkJob(c *gin.Context) {
 	msg := ""
 
 	c.Bind(&processIDs)
+	_ = logger.Infof("JOB check request guid=%s pids=%v", c.Param("guid"), processIDs)
 	if len(processIDs) < 1 || len(processIDs) > 40 {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid number of arguments provided.",
@@ -561,6 +582,7 @@ func checkJob(c *gin.Context) {
 
 	j, _, err := project.GetJob(c.Param("guid"))
 	if err != nil {
+		_ = logger.Infof("JOB check guid=%s not-found: %v", c.Param("guid"), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": err.Error(),
 		})
@@ -598,15 +620,18 @@ func checkJob(c *gin.Context) {
 func collectJob(c *gin.Context) {
 	j, _, err := project.GetJob(c.Param("guid"))
 	if err != nil {
+		_ = logger.Infof("JOB collect guid=%s not-found: %v", c.Param("guid"), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"guid":  c.Param("guid"),
 			"error": err.Error(),
 		})
 		return
 	}
+	_ = logger.Infof("JOB collect request guid=%s name=%q", j.GUID.String(), j.Name)
 
 	Crashes, err := j.Collect()
 	if err != nil {
+		_ = logger.Infof("JOB collect guid=%s error: %v", j.GUID.String(), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"guid":  j.GUID,
 			"error": err.Error(),
@@ -614,12 +639,14 @@ func collectJob(c *gin.Context) {
 		return
 	}
 
+	_ = logger.Infof("JOB collect guid=%s returned %d crashes", j.GUID.String(), len(Crashes))
 	c.JSON(http.StatusOK, Crashes)
 }
 
 func plotJob(c *gin.Context) {
 	j, _, err := project.GetJob(c.Param("guid"))
 	if err != nil {
+		_ = logger.Infof("JOB plot guid=%s not-found: %v", c.Param("guid"), err)
 		c.JSON(http.StatusNotFound, gin.H{
 			"guid":  c.Param("guid"),
 			"error": err.Error(),
@@ -629,12 +656,14 @@ func plotJob(c *gin.Context) {
 
 	fID, err := strconv.Atoi(c.Query("fid"))
 	if err != nil {
+		_ = logger.Infof("JOB plot guid=%s invalid fid=%q: %v", j.GUID.String(), c.Query("fid"), err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"guid":  c.Param("guid"),
 			"error": err.Error(),
 		})
 		return
 	}
+	_ = logger.Infof("JOB plot request guid=%s fid=%d", j.GUID.String(), fID)
 
 	fuzzerID := fmt.Sprintf("%s%d", j.Banner, fID)
 	filePath := joinPath(j.AFLDir, j.Output, fuzzerID, AFL_PLOT_FILE)
@@ -647,5 +676,6 @@ func plotJob(c *gin.Context) {
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", "attachment; filename="+AFL_PLOT_FILE)
 	c.Header("Content-Type", "application/octet-stream")
+	_ = logger.Infof("JOB plot guid=%s fid=%d serving %q", j.GUID.String(), fID, filePath)
 	c.File(filePath)
 }

@@ -43,6 +43,7 @@ func (a *Agent) Run() {
 		logger.Info("Started HTTP Server.")
 
 		r := gin.Default()
+		r.Use(agentRequestLogger())
 		key, err := getKey()
 		if err != nil {
 			logger.Error(err.Error())
@@ -122,5 +123,6 @@ func (a *Agent) Stop(s service.Service) error {
 		logger.Errorf("Server was forced to shutdown: %s", err)
 	}
 
+	closeAgentLogFile()
 	return nil
 }
