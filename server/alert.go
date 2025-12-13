@@ -11,6 +11,7 @@ import (
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/Masterminds/squirrel"
+	"github.com/gin-gonic/gin"
 	"github.com/parnurzeal/gorequest"
 	"github.com/rs/xid"
 	"github.com/sgabe/structable"
