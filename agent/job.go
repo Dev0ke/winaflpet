@@ -47,6 +47,13 @@ type Job struct {
 	AFLFMode       int    `json:"afl_f_mode"`
 	AFLFDir        string `json:"afl_f_dir"`
 	AFLFSuffix     string `json:"afl_f_suffix"`
+	AnalysisScript      string `json:"analysis_script"`
+	AnalysisWinDbg      string `json:"analysis_windbg"`
+	AnalysisMem         int    `json:"analysis_mem"`
+	AnalysisTimeout     int    `json:"analysis_timeout"`
+	AnalysisPageHeap    int    `json:"analysis_pageheap"`
+	AnalysisRetries     int    `json:"analysis_retries"`
+	AnalysisIntervalMin int    `json:"analysis_interval_min"`
 	DrioPersistenceInApp int `json:"drio_persistence_in_app"`
 	TinyPersist    int    `json:"ti_persist"`
 	TinyLoop       int    `json:"ti_loop"`
@@ -191,12 +198,11 @@ func (j Job) Start(fID int) error {
 			dir = filepath.Join(j.AFLDir, dir)
 		}
 
-		r4 := xid.New().String()
-		if len(r4) > 4 {
-			r4 = r4[:4]
-		}
-
-		fuzzFilePath := filepath.Clean(filepath.Join(dir, r4+strings.TrimSpace(j.AFLFSuffix)))
+		// NOTE: Use crypto/rand for strong randomness. XID prefixes can collide when truncated.
+		// Also include banner+fid so different instances for the same job never share the same file.
+		rnd := randAlphaNumString(8)
+		base := fmt.Sprintf("%s%d_%s", j.Banner, fID, rnd)
+		fuzzFilePath := filepath.Clean(filepath.Join(dir, base+normalizeExtWithDot(j.AFLFSuffix)))
 		args = append(args, fmt.Sprintf("-f %s", quoteWindowsArg(fuzzFilePath)))
 		targetArgs = expandAtArgs(targetArgs, fuzzFilePath)
 		_ = logger.Infof("JOB start guid=%s fid=%d afl_f_mode=1 fuzz_file=%q", j.GUID.String(), fID, fuzzFilePath)
@@ -506,6 +512,8 @@ func startJob(c *gin.Context) {
 	if ok, _ := project.FindJob(j.GUID); !ok {
 		project.AddJob(j)
 	}
+	// Start (or ensure) analysis scheduler for this job.
+	startAnalysisScheduler(j.GUID.String())
 
 	c.JSON(http.StatusCreated, gin.H{
 		"guid": j.GUID,
@@ -534,6 +542,7 @@ func stopJob(c *gin.Context) {
 	}
 
 	project.RemoveJob(i)
+	stopAnalysisScheduler(j.GUID.String())
 
 	c.JSON(http.StatusOK, gin.H{
 		"guid": j.GUID,

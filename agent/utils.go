@@ -29,6 +29,7 @@ const (
 
 var envKeyRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var atArgRe = regexp.MustCompile(`@@\S*`)
+var alphaNum = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
 
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -57,6 +58,21 @@ func splitList(text string) []string {
 		out = append(out, v)
 	}
 	return out
+}
+
+func randAlphaNumString(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		// Best-effort fallback: deterministic but at least non-empty.
+		return "rnd"
+	}
+	for i := 0; i < n; i++ {
+		b[i] = alphaNum[int(b[i])%len(alphaNum)]
+	}
+	return string(b)
 }
 
 func parseEnvVars(text string) ([]string, error) {

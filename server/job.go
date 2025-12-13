@@ -39,6 +39,13 @@ const (
 		"afl_f_mode" INTEGER,
 		"afl_f_dir" TEXT,
 		"afl_f_suffix" TEXT,
+		"analysis_script" TEXT,
+		"analysis_windbg" TEXT,
+		"analysis_mem" INTEGER,
+		"analysis_timeout" INTEGER,
+		"analysis_pageheap" INTEGER,
+		"analysis_retries" INTEGER,
+		"analysis_interval_min" INTEGER,
 		"drio_persistence_in_app" INTEGER,
 		"ti_persist" INTEGER,
 		"ti_loop" INTEGER,
@@ -99,6 +106,13 @@ type Job struct {
 	AFLFMode       int    `json:"afl_f_mode" form:"afl_f_mode" stbl:"afl_f_mode"`
 	AFLFDir        string `json:"afl_f_dir" form:"afl_f_dir" stbl:"afl_f_dir"`
 	AFLFSuffix     string `json:"afl_f_suffix" form:"afl_f_suffix" stbl:"afl_f_suffix"`
+	AnalysisScript      string `json:"analysis_script" form:"analysis_script" stbl:"analysis_script"`
+	AnalysisWinDbg      string `json:"analysis_windbg" form:"analysis_windbg" stbl:"analysis_windbg"`
+	AnalysisMem         int    `json:"analysis_mem" form:"analysis_mem" stbl:"analysis_mem"`
+	AnalysisTimeout     int    `json:"analysis_timeout" form:"analysis_timeout" stbl:"analysis_timeout"`
+	AnalysisPageHeap    int    `json:"analysis_pageheap" form:"analysis_pageheap" stbl:"analysis_pageheap"`
+	AnalysisRetries     int    `json:"analysis_retries" form:"analysis_retries" stbl:"analysis_retries"`
+	AnalysisIntervalMin int    `json:"analysis_interval_min" form:"analysis_interval_min" stbl:"analysis_interval_min"`
 	DrioPersistenceInApp int `json:"drio_persistence_in_app" form:"drio_persistence_in_app" stbl:"drio_persistence_in_app"`
 	TinyPersist    int    `json:"ti_persist" form:"ti_persist" stbl:"ti_persist"`
 	TinyLoop       int    `json:"ti_loop" form:"ti_loop" stbl:"ti_loop"`
@@ -148,6 +162,13 @@ func newJob() *Job {
 	j.AFLFMode = 0
 	j.AFLFDir = ""
 	j.AFLFSuffix = ""
+	j.AnalysisScript = ""
+	j.AnalysisWinDbg = ""
+	j.AnalysisMem = 1600
+	j.AnalysisTimeout = 60
+	j.AnalysisRetries = 2
+	j.AnalysisPageHeap = 0
+	j.AnalysisIntervalMin = 0
 	j.DrioPersistenceInApp = 0
 	// Preserve previous TinyInst defaults (persist+loop were always enabled).
 	j.TinyPersist = 1
@@ -713,6 +734,8 @@ func createJobs(c *gin.Context) {
 			})
 			return
 		}
+		// Normalize extension-like fields: store AFL file suffix without leading dot.
+		j.AFLFSuffix = strings.TrimPrefix(strings.TrimSpace(j.AFLFSuffix), ".")
 		if err := j.Insert(); err != nil {
 			otherError(c, map[string]string{
 				"alert": err.Error(),
@@ -763,6 +786,9 @@ func uploadJobs(c *gin.Context) {
 		if err = json.Unmarshal([]byte(f), &j); err != nil {
 			break
 		}
+
+		// Normalize extension-like fields: store AFL file suffix without leading dot.
+		j.AFLFSuffix = strings.TrimPrefix(strings.TrimSpace(j.AFLFSuffix), ".")
 
 		if err = j.Insert(); err != nil {
 			break
@@ -829,6 +855,7 @@ func editJob(c *gin.Context) {
 		j.Autoresume = 0
 		j.IgnoreHitcount = 0
 		j.AFLFMode = 0
+		j.AnalysisPageHeap = 0
 		j.DrioPersistenceInApp = 0
 		j.TinyPersist = 0
 		j.TinyLoop = 0
@@ -839,6 +866,8 @@ func editJob(c *gin.Context) {
 			})
 			return
 		}
+		// Normalize extension-like fields: store AFL file suffix without leading dot.
+		j.AFLFSuffix = strings.TrimPrefix(strings.TrimSpace(j.AFLFSuffix), ".")
 		if err := j.Update(); err != nil {
 			otherError(c, map[string]string{
 				"title": title,

@@ -1,0 +1,45 @@
+{{define "content"}}
+<div id="analysis" data-job-guid="{{.guid}}">
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          Buckets
+        </div>
+        <div class="card-body p-0">
+          <div id="analysisBuckets" class="list-group list-group-flush"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          Files
+          <small class="text-body-secondary" id="analysisBucketTitle"></small>
+        </div>
+        <div class="card-body p-0">
+          <div id="analysisFiles" class="list-group list-group-flush"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="analysisModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="analysisModalTitle">Report</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="analysisModalBody" style="white-space: pre-wrap;"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+

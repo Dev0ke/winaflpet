@@ -67,6 +67,8 @@ $(function () {
                 method: $(this).attr("data-method"),
                 context: $(this),
                 dataType: $(this).attr("data-type") ? "binary" : "json",
+                contentType: $(this).data("payload") ? "application/json" : undefined,
+                data: $(this).data("payload") ? $(this).data("payload") : undefined,
                 statusCode: {
                     401: function() {
                         setTimeout(function() {
@@ -133,6 +135,103 @@ $(function () {
         setInterval(function() {
             location.reload();
         }, 1000*100);
+    }
+
+    if ($("#analysis").length) {
+        var guid = $("#analysis").attr("data-job-guid");
+        var selectedBucket = "";
+
+        var renderBuckets = function(buckets) {
+            $("#analysisBuckets").empty();
+            if (!buckets || buckets.length === 0) {
+                $("#analysisBuckets").append('<div class="list-group-item text-body-secondary">No results yet.</div>');
+                return;
+            }
+            buckets.forEach(function(b) {
+                var item = $('<a href="#" class="list-group-item list-group-item-action"></a>');
+                item.text(b);
+                item.on("click", function(e) {
+                    e.preventDefault();
+                    selectedBucket = b;
+                    $("#analysisBucketTitle").text(" / " + b);
+                    loadFiles(b);
+                });
+                $("#analysisBuckets").append(item);
+            });
+        };
+
+        var renderFiles = function(files) {
+            $("#analysisFiles").empty();
+            if (!files || files.length === 0) {
+                $("#analysisFiles").append('<div class="list-group-item text-body-secondary">No files.</div>');
+                return;
+            }
+            files.forEach(function(f) {
+                var row = $('<div class="list-group-item d-flex justify-content-between align-items-center"></div>');
+                var left = $('<a href="#" class="me-2 flex-grow-1"></a>');
+                left.text(f);
+                left.on("click", function(e) {
+                    e.preventDefault();
+                    readReport(selectedBucket, f);
+                });
+
+                // file_root == crash hash (per your script)
+                var hash = f;
+
+                var btns = $('<div class="btn-group"></div>');
+                var dl = $('<a class="btn btn-outline-secondary action download" data-type="binary" data-method="POST" href="/job/' + guid + '/analysis_download_crash"></a>');
+                dl.append('<svg class="bi bi-download" width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><use xlink:href="/static/svg/bootstrap-icons.svg#download"/></svg>');
+                dl.data("payload", JSON.stringify({hash: hash}));
+
+                var del = $('<a class="btn btn-outline-secondary action delete" data-method="POST" href="/job/' + guid + '/analysis_delete"></a>');
+                del.append('<svg class="bi bi-trash-fill" width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><use xlink:href="/static/svg/bootstrap-icons.svg#trash-fill"/></svg>');
+                del.data("payload", JSON.stringify({bucket: selectedBucket, file: f}));
+
+                btns.append(dl).append(del);
+
+                row.append(left).append(btns);
+                $("#analysisFiles").append(row);
+            });
+        };
+
+        var loadBuckets = function() {
+            $.ajax({
+                url: "/job/" + guid + "/analysis_buckets",
+                method: "POST",
+                dataType: "json",
+            }).done(function(data) {
+                renderBuckets(data.buckets || []);
+            });
+        };
+
+        var loadFiles = function(bucket) {
+            $.ajax({
+                url: "/job/" + guid + "/analysis_files",
+                method: "POST",
+                dataType: "json",
+                data: JSON.stringify({bucket: bucket}),
+                contentType: "application/json",
+            }).done(function(data) {
+                renderFiles(data.files || []);
+            });
+        };
+
+        var readReport = function(bucket, file) {
+            $.ajax({
+                url: "/job/" + guid + "/analysis_read",
+                method: "POST",
+                dataType: "json",
+                data: JSON.stringify({bucket: bucket, file: file}),
+                contentType: "application/json",
+            }).done(function(data) {
+                $("#analysisModalTitle").text(bucket + " / " + file);
+                $("#analysisModalBody").text(data.text || "");
+                var m = new bootstrap.Modal(document.getElementById("analysisModal"));
+                m.show();
+            });
+        };
+
+        loadBuckets();
     }
 
     $("form.create").submit(function(e) {

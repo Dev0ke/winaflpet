@@ -88,6 +88,16 @@ func (a *Agent) Run() {
 				collectJob(c)
 			case "plot":
 				plotJob(c)
+			case "analysis_buckets":
+				analysisListBuckets(c)
+			case "analysis_files":
+				analysisListFiles(c)
+			case "analysis_read":
+				analysisReadFile(c)
+			case "analysis_delete":
+				analysisDeleteFile(c)
+			case "analysis_download_crash":
+				analysisDownloadCrash(c)
 			default:
 				c.JSON(http.StatusNotImplemented, gin.H{})
 			}

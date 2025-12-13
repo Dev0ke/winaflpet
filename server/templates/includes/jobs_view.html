@@ -64,6 +64,13 @@
                 <use xlink:href="/static/svg/bootstrap-icons.svg#cloud-arrow-down-fill"/>
               </svg>
             </a>
+            {{if (ne .Status 0) }}
+            <a href="/job/{{.GUID}}/analysis" class="btn btn-outline-secondary action analysis">
+              <svg class="bi bi-list" width="20" height="20" fill="currentColor" color="#0074D9" viewBox="0 0 20 20">
+                <use xlink:href="/static/svg/bootstrap-icons.svg#list"/>
+              </svg>
+            </a>
+            {{end}}
             {{if not (.HasAlert) }}
             <a href="/job/{{.GUID}}/alert" class="btn btn-outline-secondary action alarm {{if (eq .Status 0) }}disabled{{end}}" data-method="POST">
               <svg class="bi alarm-fill" width="20" height="20" fill="currentColor" color="green"  viewBox="0 0 20 20">

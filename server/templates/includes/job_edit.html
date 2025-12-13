@@ -197,7 +197,60 @@
         <label for="aflFSuffix" class="col-md col-form-label">AFL <code>-f</code> suffix</label>
         <div class="col-md">
           <input type="text" class="form-control" name="afl_f_suffix" id="aflFSuffix" aria-describedby="aflFSuffixHelp" value="{{.job.AFLFSuffix}}">
-          <small id="aflFSuffixHelp" class="form-text text-muted">Suffix appended to a random 4-char filename (e.g. <code>.ppt</code>).</small>
+          <small id="aflFSuffixHelp" class="form-text text-muted">File extension (without leading dot) appended to a per-instance random filename (e.g. <code>ppt</code>).</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-3">
+      <div class="col-md-12">
+        <h6>Analysis (Python + WinDbg)</h6>
+      </div>
+      <div class="col-md">
+        <label for="analysisScript" class="col-md col-form-label">Python analysis script path</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="analysis_script" id="analysisScript" value="{{.job.AnalysisScript}}">
+          <small class="form-text text-muted">Executed as <code>python.exe &lt;script&gt; ...</code> (python.exe is resolved from environment PATH on the agent).</small>
+        </div>
+      </div>
+      <div class="col-md">
+        <label for="analysisWinDbg" class="col-md col-form-label">WinDbg (cdb.exe) path</label>
+        <div class="col-md">
+          <input type="text" class="form-control" name="analysis_windbg" id="analysisWinDbg" value="{{.job.AnalysisWinDbg}}">
+        </div>
+      </div>
+      <div class="col-md">
+        <label for="analysisMem" class="col-md col-form-label">Memory limit (MB)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_mem" id="analysisMem" value="{{.job.AnalysisMem}}">
+        </div>
+      </div>
+      <div class="col-md">
+        <label for="analysisTimeout" class="col-md col-form-label">Timeout (s)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_timeout" id="analysisTimeout" value="{{.job.AnalysisTimeout}}">
+        </div>
+      </div>
+    </div>
+
+    <div class="row ms-0 mt-2">
+      <div class="col-md">
+        <label for="analysisRetries" class="col-md col-form-label">Retries</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_retries" id="analysisRetries" value="{{.job.AnalysisRetries}}">
+        </div>
+      </div>
+      <div class="col-md">
+        <label for="analysisInterval" class="col-md col-form-label">Analysis interval (minutes)</label>
+        <div class="col-md">
+          <input type="number" class="form-control" name="analysis_interval_min" id="analysisInterval" value="{{.job.AnalysisIntervalMin}}">
+          <small class="form-text text-muted">0 disables. Runs only while the job is running on the agent.</small>
+        </div>
+      </div>
+      <div class="col-3 d-flex align-items-end">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="analysis_pageheap" id="analysisPageHeap" value="1" {{if eq .job.AnalysisPageHeap 1}}checked{{end}}>
+          <label class="form-check-label" for="analysisPageHeap">Enable PageHeap</label>
         </div>
       </div>
     </div>
