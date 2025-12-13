@@ -378,8 +378,8 @@
       <div class="col-md">
         <label for="instrumentTransitive" class="col-md col-form-label">Instrument transitive module(s)</label>
         <div class="col-md">
-          <textarea class="form-control" name="instrument_transitive" id="instrumentTransitive" rows="2" aria-describedby="instrumentTransitiveHelp" placeholder="mso.dll&#10;mso20win32client.dll"></textarea>
-          <small id="instrumentTransitiveHelp" class="form-text text-muted">TinyInst only. One module per line (or comma-separated). Adds <code>-instrument_transitive &lt;module&gt;</code> for each.</small>
+          <textarea class="form-control" name="instrument_transitive" id="instrumentTransitive" rows="2" aria-describedby="instrumentTransitiveHelp" placeholder="test.dll"></textarea>
+          <small id="instrumentTransitiveHelp" class="form-text text-muted">TinyInst only. One module per line (or comma-separated).</small>
         </div>
       </div>
 
@@ -421,7 +421,7 @@
             <input class="form-check-input" type="checkbox" name="ti_loop" id="tinyLoop" value="1" checked>
             <label class="form-check-label" for="tinyLoop">TinyInst: <code>-loop</code></label>
           </div>
-          <small class="form-text text-muted">Adds <code>-ignore_hitcount</code> to the WinAFL command line.</small>
+          <small class="form-text text-muted"></small>
         </div>
       </div>
     </div>
@@ -488,8 +488,8 @@
         <label for="targetArch" class="col-md col-form-label">Architecture</label>
         <div class="col-md">
           <select class="form-select" name="target_arch" id="targetArch">
-            <option>x86</option>
             <option>x64</option>
+            <option>x86</option>
           </select>
           <small id="targetArchHelp" class="form-text text-muted">Target architecture</small>
         </div>
