@@ -20,6 +20,7 @@ import (
 
 	"github.com/danieljoos/wincred"
 	"github.com/mitchellh/go-ps"
+	"golang.org/x/sys/windows/registry"
 )
 
 const (
@@ -128,6 +129,66 @@ func applyEnvOverrides(base []string, overrides []string) []string {
 
 	out = append(out, overrides...)
 	return out
+}
+func mergeEnvMissing(base []string, add []string) []string {
+	if len(add) == 0 {
+		return base
+	}
+
+	keys := map[string]struct{}{}
+	for _, kv := range base {
+		if i := strings.Index(kv, "="); i > 0 {
+			keys[strings.ToUpper(kv[:i])] = struct{}{}
+		}
+	}
+
+	out := make([]string, 0, len(base)+len(add))
+	out = append(out, base...)
+	for _, kv := range add {
+		i := strings.Index(kv, "=")
+		if i <= 0 {
+			continue
+		}
+		k := strings.ToUpper(kv[:i])
+		if _, ok := keys[k]; ok {
+			continue
+		}
+		keys[k] = struct{}{}
+		out = append(out, kv)
+	}
+	return out
+}
+
+// readSystemEnvVars reads HKLM "system" environment variables.
+// This is useful when the agent runs as a service and its process env is incomplete.
+func readSystemEnvVars() ([]string, error) {
+	k, err := registry.OpenKey(
+		registry.LOCAL_MACHINE,
+		`SYSTEM\CurrentControlSet\Control\Session Manager\Environment`,
+		registry.QUERY_VALUE,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer k.Close()
+
+	names, err := k.ReadValueNames(0)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]string, 0, len(names))
+	for _, name := range names {
+		val, valType, err := k.GetStringValue(name)
+		if err != nil {
+			continue
+		}
+		if valType != registry.SZ && valType != registry.EXPAND_SZ {
+			continue
+		}
+		out = append(out, fmt.Sprintf("%s=%s", name, val))
+	}
+	return out, nil
 }
 
 func stripAnsi(s string) string {

@@ -125,7 +125,11 @@ func (j Job) Start(fID int) error {
 	}
 
 	envs := os.Environ()
-
+	// Merge in HKLM system environment variables (best-effort). This helps when the
+	// agent runs as a Windows service and its process environment is incomplete.
+	if sysEnvs, err := readSystemEnvVars(); err == nil {
+		envs = mergeEnvMissing(envs, sysEnvs)
+	}
 	if j.Autoresume != 0 {
 		envs = append(envs, "AFL_AUTORESUME=1")
 	} else {
