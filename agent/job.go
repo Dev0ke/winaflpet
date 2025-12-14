@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -340,16 +341,20 @@ func (j Job) Start(fID int) error {
 	cmd.SysProcAttr.CmdLine = strings.Join(cmd.Args, ` `)
 	_ = logger.Infof("JOB start guid=%s fid=%d cmd=%s", j.GUID.String(), fID, cmd.SysProcAttr.CmdLine)
 	stdoutPipe, _ := cmd.StdoutPipe()
+	stderrPipe, _ := cmd.StderrPipe()
 	stdoutReader := bufio.NewReader(stdoutPipe)
+	stderrReader := bufio.NewReader(stderrPipe)
 
 	if err := cmd.Start(); err != nil {
 		logger.Error(err)
 		return err
 	}
 
-	c := make(chan error)
+	// Buffered so stdout/stderr drainers never block after Start() returns.
+	c := make(chan error, 1)
 
 	go readStdout(c, stdoutReader)
+	go readStderr(c, stderrReader)
 
 	select {
 	case err := <-c:
@@ -480,6 +485,35 @@ func (j Job) Collect() ([]Crash, error) {
 	return crashes, err
 }
 
+func (j Job) withBinDirs() Job {
+	binDir := "bin32"
+	if j.TargetArch == "x64" {
+		binDir = "bin64"
+	}
+	j.AFLDir = path.Join(j.AFLDir, binDir)
+	j.DrioDir = path.Join(j.DrioDir, binDir)
+	return j
+}
+
+func (j Job) isInstanceRunning(fid int) bool {
+	j2 := j.withBinDirs()
+	fuzzerID := fmt.Sprintf("%s%d", j2.Banner, fid)
+	statsFile := joinPath(j2.AFLDir, j2.Output, fuzzerID, AFL_STATS_FILE)
+	if !fileExists(statsFile) {
+		return false
+	}
+	content, err := os.ReadFile(statsFile)
+	if err != nil {
+		return false
+	}
+	st, err := parseStats(string(content))
+	if err != nil || st.FuzzerProcessID == 0 {
+		return false
+	}
+	ok, _ := j2.Check(st.FuzzerProcessID)
+	return ok
+}
+
 func startJob(c *gin.Context) {
 	j := newJob(c.Param("guid"))
 	_ = logger.Infof("JOB start request guid=%s", c.Param("guid"))
@@ -520,6 +554,89 @@ func startJob(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"guid": j.GUID,
 		"msg":  fmt.Sprintf("Fuzzer instance #%d of job %s has been successfuly started!", fID, j.Name),
+	})
+}
+
+// startAllJob starts master first, then starts remaining instances in parallel.
+// This speeds up multi-core start compared to sequential HTTP calls.
+func startAllJob(c *gin.Context) {
+	j := newJob(c.Param("guid"))
+	_ = logger.Infof("JOB start_all request guid=%s", c.Param("guid"))
+
+	if err := c.ShouldBindJSON(&j); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"guid":  c.Param("guid"),
+			"error": err.Error(),
+		})
+		return
+	}
+
+	started := make([]int, 0, j.Cores)
+	skipped := make([]int, 0, j.Cores)
+	failed := map[string]string{}
+
+	// Start master first if needed (fid=1).
+	if j.Cores >= 1 {
+		if j.isInstanceRunning(1) {
+			skipped = append(skipped, 1)
+		} else if err := j.Start(1); err != nil {
+			failed["1"] = err.Error()
+		} else {
+			started = append(started, 1)
+		}
+	}
+
+	// Start slaves in parallel (bounded).
+	maxPar := 4
+	if j.Cores-1 < maxPar {
+		maxPar = j.Cores - 1
+	}
+	if maxPar < 1 {
+		maxPar = 1
+	}
+	sem := make(chan struct{}, maxPar)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for fid := 2; fid <= j.Cores; fid++ {
+		fid := fid
+		if j.isInstanceRunning(fid) {
+			skipped = append(skipped, fid)
+			continue
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			if err := j.Start(fid); err != nil {
+				mu.Lock()
+				failed[strconv.Itoa(fid)] = err.Error()
+				mu.Unlock()
+				return
+			}
+			mu.Lock()
+			started = append(started, fid)
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+
+	// Track running job so view/collect/check work.
+	if ok, _ := project.FindJob(j.GUID); !ok {
+		project.AddJob(j)
+	}
+	startAnalysisScheduler(j.GUID.String())
+
+	msg := fmt.Sprintf("start_all done: started=%v skipped=%v failed=%d", started, skipped, len(failed))
+	c.JSON(http.StatusOK, gin.H{
+		"guid":    j.GUID,
+		"msg":     msg,
+		"started": started,
+		"skipped": skipped,
+		"failed":  failed,
 	})
 }
 

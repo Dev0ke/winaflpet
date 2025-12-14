@@ -366,20 +366,48 @@ func joinPath(workingDir string, outputDir string, pathNames ...string) string {
 }
 
 func readStdout(c chan error, rd *bufio.Reader) {
+	readAFLStream(c, rd)
+}
+
+func readStderr(c chan error, rd *bufio.Reader) {
+	readAFLStream(c, rd)
+}
+
+func readAFLStream(c chan error, rd *bufio.Reader) {
+	// Keep draining stdout/stderr so afl-fuzz never blocks on a full pipe, but only
+	// notify the starter once (ready/fail/early-exit).
+	sent := false
+	failRe := regexp.MustCompile(AFL_FAIL_REGEX)
+
+	trySend := func(err error) {
+		// Requires buffered channel, otherwise we may drop; Start() uses buffer=1.
+		select {
+		case c <- err:
+		default:
+		}
+	}
+
 	for {
-		l, _, err := rd.ReadLine()
-		if err != nil || err == io.EOF {
-			c <- err
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			if !sent {
+				trySend(err)
+			}
+			return
 		}
 
-		s := string(l)
-		if strings.Contains(s, AFL_SUCCESS_MSG) {
-			c <- nil
-		}
-
-		m := regexp.MustCompile(AFL_FAIL_REGEX).FindStringSubmatch(s)
-		if len(m) > 0 {
-			c <- errors.New(stripAnsi(m[1]))
+		s := strings.TrimRight(line, "\r\n")
+		if !sent {
+			if strings.Contains(s, AFL_SUCCESS_MSG) {
+				trySend(nil)
+				sent = true
+				continue
+			}
+			if m := failRe.FindStringSubmatch(s); len(m) > 0 {
+				trySend(errors.New(stripAnsi(m[1])))
+				sent = true
+				continue
+			}
 		}
 	}
 }

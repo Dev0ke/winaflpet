@@ -381,71 +381,41 @@ func startAllJob(c *gin.Context) {
 	request := gorequest.New().Timeout(300 * time.Second)
 	request.Debug = false
 
-	// Determine remaining instances to start (based on server-side status bitmask).
-	// Start master (fid=1) before any slaves.
-	toStart := make([]int, 0, j.Cores)
-	if j.Cores >= 1 && !hasStatus(j.Status, 1) {
-		toStart = append(toStart, 1)
-	}
-	for fID := 2; fID <= j.Cores; fID++ {
-		if !hasStatus(j.Status, fID) {
-			toStart = append(toStart, fID)
-		}
-	}
-
-	if len(toStart) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"alert":   fmt.Sprintf("All %d fuzzer instance(s) are already started for job %s.", j.Cores, j.Name),
-			"context": "success",
-		})
+	// Call agent start_all to start instances in parallel (master first).
+	targetURL := fmt.Sprintf("http://%s:%d/job/%s/start_all", a.Host, a.Port, j.GUID)
+	_, bodyBytes, errs := request.Post(targetURL).Set("X-Auth-Key", a.Key).Send(j).EndBytes()
+	if errs != nil {
+		otherError(c, map[string]string{"alert": errs[0].Error()})
 		return
 	}
 
-	started := make([]int, 0, len(toStart))
-	targetURL := fmt.Sprintf("http://%s:%d/job/%s/start", a.Host, a.Port, j.GUID)
-
-	for _, fID := range toStart {
-		_, bodyBytes, errs := request.Post(targetURL).
-			Query(fmt.Sprintf("fid=%d", fID)).
-			Set("X-Auth-Key", a.Key).
-			Send(j).
-			EndBytes()
-		if errs != nil {
-			otherError(c, map[string]string{
-				"alert": fmt.Sprintf("Failed starting instance #%d for job %s: %s (already started: %v)", fID, j.Name, errs[0].Error(), started),
-			})
-			return
-		}
-
-		resp := APIResponse{}
-		if err := json.Unmarshal(bodyBytes, &resp); err != nil {
-			otherError(c, map[string]string{
-				"alert": fmt.Sprintf("Failed starting instance #%d for job %s: %s (already started: %v)", fID, j.Name, err.Error(), started),
-			})
-			return
-		}
-
-		if len(resp.Err) > 0 {
-			// Preserve the single-start behavior for this special case.
-			if strings.Contains(resp.Err, "At-risk data found") {
-				j.Input = "-"
-				j.Update()
-				j.Cleanup(fID)
-				resp.Err = "At-risk data found, try to start again to resume an aborted job."
-			}
-			otherError(c, map[string]string{
-				"alert": fmt.Sprintf("Failed starting instance #%d for job %s: %s (already started: %v)", fID, j.Name, resp.Err, started),
-			})
-			return
-		}
-
-		j.Status = setStatus(j.Status, statusMap[fID])
-		j.Update()
-		started = append(started, fID)
+	type startAllResp struct {
+		Msg     string            `json:"msg"`
+		Err     string            `json:"error"`
+		Started []int             `json:"started"`
+		Skipped []int             `json:"skipped"`
+		Failed  map[string]string `json:"failed"`
+	}
+	resp := startAllResp{}
+	if err := json.Unmarshal(bodyBytes, &resp); err != nil {
+		otherError(c, map[string]string{"alert": err.Error()})
+		return
+	}
+	if strings.TrimSpace(resp.Err) != "" {
+		otherError(c, map[string]string{"alert": resp.Err})
+		return
 	}
 
+	// Update server-side status bits for started fids.
+	for _, fID := range resp.Started {
+		if fID >= 1 && fID <= 40 {
+			j.Status = setStatus(j.Status, statusMap[fID])
+		}
+	}
+	_ = j.Update()
+
 	c.JSON(http.StatusOK, gin.H{
-		"alert":   fmt.Sprintf("Started %d instance(s) for job %s: %v", len(started), j.Name, started),
+		"alert":   resp.Msg,
 		"context": "success",
 	})
 }
