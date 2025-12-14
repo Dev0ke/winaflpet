@@ -34,6 +34,11 @@ const (
 	AFL_PLOT_FILE   = "plot_data"
 )
 
+var (
+	startAllMu      sync.Mutex
+	startAllRunning = map[string]bool{}
+)
+
 type Job struct {
 	GUID           xid.ID `json:"guid"`
 	Name           string `json:"name"`
@@ -571,72 +576,145 @@ func startAllJob(c *gin.Context) {
 		return
 	}
 
+	jobKey := j.GUID.String()
+
+	startAllMu.Lock()
+	if startAllRunning[jobKey] {
+		startAllMu.Unlock()
+		c.JSON(http.StatusOK, gin.H{
+			"guid":  j.GUID,
+			"msg":   "start_all already running",
+			"error": "",
+		})
+		return
+	}
+	startAllRunning[jobKey] = true
+	startAllMu.Unlock()
+
+	// Ensure job is tracked so view/collect/check and analysis scheduler work even while starting.
+	if ok, _ := project.FindJob(j.GUID); !ok {
+		project.AddJob(j)
+	}
+	startAnalysisScheduler(jobKey)
+
 	started := make([]int, 0, j.Cores)
 	skipped := make([]int, 0, j.Cores)
-	failed := map[string]string{}
+	queued := make([]int, 0, j.Cores)
 
-	// Start master first if needed (fid=1).
+	// Start master first (synchronous) so the caller gets a definitive "job started" signal.
 	if j.Cores >= 1 {
 		if j.isInstanceRunning(1) {
 			skipped = append(skipped, 1)
-		} else if err := j.Start(1); err != nil {
-			failed["1"] = err.Error()
 		} else {
+			if err := j.Start(1); err != nil {
+				startAllMu.Lock()
+				delete(startAllRunning, jobKey)
+				startAllMu.Unlock()
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"guid":  j.GUID,
+					"error": err.Error(),
+				})
+				return
+			}
 			started = append(started, 1)
 		}
 	}
 
-	// Start slaves in parallel (bounded).
-	maxPar := 4
-	if j.Cores-1 < maxPar {
-		maxPar = j.Cores - 1
-	}
-	if maxPar < 1 {
-		maxPar = 1
-	}
-	sem := make(chan struct{}, maxPar)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-
+	// Decide which slaves still need starting; start them in background so HTTP returns quickly.
 	for fid := 2; fid <= j.Cores; fid++ {
-		fid := fid
 		if j.isInstanceRunning(fid) {
 			skipped = append(skipped, fid)
-			continue
+		} else {
+			queued = append(queued, fid)
 		}
+	}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			if err := j.Start(fid); err != nil {
-				mu.Lock()
-				failed[strconv.Itoa(fid)] = err.Error()
-				mu.Unlock()
-				return
-			}
-			mu.Lock()
-			started = append(started, fid)
-			mu.Unlock()
+	go func(job Job, fids []int) {
+		defer func() {
+			startAllMu.Lock()
+			delete(startAllRunning, jobKey)
+			startAllMu.Unlock()
 		}()
-	}
-	wg.Wait()
 
-	// Track running job so view/collect/check work.
-	if ok, _ := project.FindJob(j.GUID); !ok {
-		project.AddJob(j)
-	}
-	startAnalysisScheduler(j.GUID.String())
+		// More parallelism for large core counts.
+		maxPar := 8
+		if len(fids) < maxPar {
+			maxPar = len(fids)
+		}
+		if maxPar < 1 {
+			return
+		}
+		sem := make(chan struct{}, maxPar)
+		var wg sync.WaitGroup
 
-	msg := fmt.Sprintf("start_all done: started=%v skipped=%v failed=%d", started, skipped, len(failed))
-	c.JSON(http.StatusOK, gin.H{
+		for _, fid := range fids {
+			fid := fid
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				// Re-check just before starting to avoid duplicates.
+				if job.isInstanceRunning(fid) {
+					return
+				}
+				if err := job.Start(fid); err != nil {
+					_ = logger.Infof("JOB start_all guid=%s fid=%d error: %v", jobKey, fid, err)
+					return
+				}
+				_ = logger.Infof("JOB start_all guid=%s fid=%d started", jobKey, fid)
+			}()
+		}
+		wg.Wait()
+	}(j, queued)
+
+	msg := fmt.Sprintf("start_all accepted: started=%v skipped=%v queued=%d", started, skipped, len(queued))
+	c.JSON(http.StatusAccepted, gin.H{
 		"guid":    j.GUID,
 		"msg":     msg,
+		"error":   "",
 		"started": started,
 		"skipped": skipped,
-		"failed":  failed,
+		"queued":  queued,
+	})
+}
+
+// startAllStatusJob returns current multi-core start progress for a job.
+// It checks for each fid whether a live afl-fuzz process exists (via fuzzer_stats pid + process lookup).
+func startAllStatusJob(c *gin.Context) {
+	jobGUID := c.Param("guid")
+
+	// Prefer the in-memory tracked job config.
+	job, _, err := project.GetJob(jobGUID)
+	if err != nil || job.GUID.String() == "" {
+		// Fallback: allow passing full job config (best-effort).
+		tmp := newJob(jobGUID)
+		_ = c.ShouldBindJSON(&tmp)
+		job = tmp
+	}
+
+	total := job.Cores
+	if total <= 0 {
+		total = 1
+	}
+
+	running := make([]int, 0, total)
+	pending := make([]int, 0, total)
+	for fid := 1; fid <= total; fid++ {
+		if job.isInstanceRunning(fid) {
+			running = append(running, fid)
+		} else {
+			pending = append(pending, fid)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"guid":          job.GUID,
+		"total":         total,
+		"running_count": len(running),
+		"running_fids":  running,
+		"pending_fids":  pending,
 	})
 }
 

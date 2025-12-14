@@ -43,6 +43,54 @@ $(function () {
         $("html, body").animate({ scrollTop: 0 }, "fast");
     }
 
+    var startAllPoll = function(startAllUrl) {
+        // Poll server for /start_all_status and show progress in alert + badge.
+        var statusUrl = startAllUrl.replace(/\/start_all(\?.*)?$/, "/start_all_status");
+        var maxTicks = 120; // ~6 minutes @ 3s
+        var tick = 0;
+
+        var timer = setInterval(function() {
+            tick++;
+            if (tick > maxTicks) {
+                clearInterval(timer);
+                return;
+            }
+
+            $.ajax({
+                url: statusUrl,
+                method: "POST",
+                dataType: "json"
+            }).done(function(data) {
+                if (!data || !data.total) {
+                    return;
+                }
+                var total = data.total;
+                var running = data.running_count || 0;
+                showAlert("info", "Starting fuzzers: <b>" + running + "</b> / <b>" + total + "</b> running...");
+
+                // Update badge on any playall button for this job.
+                try {
+                    var m = statusUrl.match(/\/job\/([^\/]+)\//);
+                    if (m && m[1]) {
+                        var guid = m[1];
+                        $("a.playall[href^='/job/" + guid + "/start_all']").each(function() {
+                            var b = $(this).find("span.badge");
+                            if (b.length) {
+                                b.text(running + "/" + total);
+                            }
+                        });
+                    }
+                } catch (e) {}
+
+                if (running >= total) {
+                    clearInterval(timer);
+                    showAlert("success", "All fuzzers are running: <b>" + total + "</b> / <b>" + total + "</b>.");
+                    setTimeout(function() { location.reload(); }, 1000*3);
+                }
+            });
+        }, 3000);
+    }
+
     var toggleActions = function(context) {
         $(context).toggleClass("disabled");
         if (!$(context).is(".play")) {
@@ -87,6 +135,9 @@ $(function () {
                             setTimeout(function() {
                                 window.location.href = context.attr('href');
                             }, 1000*5);
+                        } else if ($(this).is("a.playall")) {
+                            // Poll for start_all progress.
+                            startAllPoll($(this).attr('href'));
                         } else if ($(this).is("a.verify") || $(this).is("a.play") || $(this).is("a.delete")) {
                             setTimeout(function() {
                                 location.reload()

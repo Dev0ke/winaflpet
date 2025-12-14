@@ -80,6 +80,8 @@ func (a *Agent) Run() {
 				startJob(c)
 			case "start_all":
 				startAllJob(c)
+			case "start_all_status":
+				startAllStatusJob(c)
 			case "stop":
 				stopJob(c)
 			case "view":

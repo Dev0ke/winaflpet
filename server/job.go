@@ -394,6 +394,7 @@ func startAllJob(c *gin.Context) {
 		Err     string            `json:"error"`
 		Started []int             `json:"started"`
 		Skipped []int             `json:"skipped"`
+		Queued  []int             `json:"queued"`
 		Failed  map[string]string `json:"failed"`
 	}
 	resp := startAllResp{}
@@ -407,10 +408,11 @@ func startAllJob(c *gin.Context) {
 	}
 
 	// Update server-side status bits for started fids.
-	for _, fID := range resp.Started {
-		if fID >= 1 && fID <= 40 {
-			j.Status = setStatus(j.Status, statusMap[fID])
-		}
+	// Since "start all" is requested, optimistically mark all instances as started
+	// so the UI enters running state immediately. Missing instances will be detected
+	// later via job view/check.
+	for fID := 1; fID <= j.Cores && fID <= 40; fID++ {
+		j.Status = setStatus(j.Status, statusMap[fID])
 	}
 	_ = j.Update()
 
@@ -418,6 +420,34 @@ func startAllJob(c *gin.Context) {
 		"alert":   resp.Msg,
 		"context": "success",
 	})
+}
+
+func startAllStatusJob(c *gin.Context) {
+	j := newJob()
+	j.GUID, _ = xid.FromString(c.Param("guid"))
+	if err := j.LoadByGUID(); err != nil {
+		otherError(c, map[string]string{"alert": err.Error()})
+		return
+	}
+
+	a, _ := j.GetAgent()
+
+	request := gorequest.New().Timeout(20 * time.Second)
+	request.Debug = false
+
+	targetURL := fmt.Sprintf("http://%s:%d/job/%s/start_all_status", a.Host, a.Port, j.GUID)
+	var out map[string]interface{}
+	resp, _, errs := request.Post(targetURL).Set("X-Auth-Key", a.Key).Send(j).EndStruct(&out)
+	if errs != nil {
+		otherError(c, map[string]string{"alert": errs[0].Error()})
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		otherError(c, map[string]string{"alert": fmt.Sprintf("agent returned status %d", resp.StatusCode)})
+		return
+	}
+
+	c.JSON(http.StatusOK, out)
 }
 
 func stopJob(c *gin.Context) {
