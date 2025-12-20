@@ -105,12 +105,19 @@ $(function () {
     $(document).on("click", "a.action", function(e) {
         var isCustom = $(this).attr("data-method");
         var isDisabled = $(this).is("a.disabled");
+        var confirmMsg = $(this).attr("data-confirm");
 
         if (isCustom || isDisabled) {
             e.preventDefault();
         }
 
         if (isCustom && !isDisabled) {
+            if (confirmMsg) {
+                var ok = window.confirm(confirmMsg);
+                if (!ok) {
+                    return;
+                }
+            }
             $.ajax({
                 url: $(this).attr('href'),
                 method: $(this).attr("data-method"),

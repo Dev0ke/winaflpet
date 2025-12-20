@@ -3,21 +3,40 @@
   {{if .stats}}
     {{$job := (index .stats 0).GetJob}}
     {{$remaining := 0}}
+    {{$next := 0}}
+    {{ $break := false }}
     {{range seq $job.Cores}}
       {{if not (hasStatus $job.Status .) }}
         {{$remaining = add $remaining 1}}
+        {{ if $break }}
+        {{ else }}
+          {{$next = .}}
+          {{ $break = true }}
+        {{ end }}
       {{end}}
     {{end}}
-    {{if gt $remaining 0}}
-      <div class="mb-3">
-        <a href="/job/{{$job.GUID}}/start_all" class="btn btn-outline-secondary action playall" data-method="POST" title="Start all remaining instances ({{ $remaining }})">
-          <svg class="bi play-fill" width="20" height="20" fill="currentColor" color="green" viewBox="0 0 20 20">
-            <use xlink:href="/static/svg/bootstrap-icons.svg#play-fill"/>
+    <div class="mb-3">
+      <div class="btn-group">
+        {{if gt $remaining 0}}
+          <a href="/job/{{$job.GUID}}/start?fid={{$next}}" class="btn btn-outline-secondary action play" data-method="POST" data-confirm="确认启动实例 #{{$next}} ?" title="Start next instance ({{$next}})">
+            <svg class="bi play-fill" width="20" height="20" fill="currentColor" color="green" viewBox="0 0 20 20">
+              <use xlink:href="/static/svg/bootstrap-icons.svg#play-fill"/>
+            </svg>
+          </a>
+          <a href="/job/{{$job.GUID}}/start_all" class="btn btn-outline-secondary action playall" data-method="POST" data-confirm="确认启动剩余 {{$remaining}} 个实例？" title="Start all remaining instances ({{ $remaining }})">
+            <svg class="bi play-fill" width="20" height="20" fill="currentColor" color="green" viewBox="0 0 20 20">
+              <use xlink:href="/static/svg/bootstrap-icons.svg#play-fill"/>
+            </svg>
+            <span class="badge text-bg-success">{{ $remaining }}</span>
+          </a>
+        {{end}}
+        <a href="/job/{{$job.GUID}}/stop" class="btn btn-outline-secondary action stop" data-method="POST" data-confirm="确认终止该 Job 的所有实例？">
+          <svg class="bi stop-fill" width="20" height="20" fill="currentColor" color="orangered" viewBox="0 0 20 20">
+            <use xlink:href="/static/svg/bootstrap-icons.svg#stop-fill"/>
           </svg>
-          <span class="badge text-bg-success">{{ $remaining }}</span>
         </a>
       </div>
-    {{end}}
+    </div>
   {{end}}
   <div id="accordion" class="accordion">
   {{ range .stats }}
